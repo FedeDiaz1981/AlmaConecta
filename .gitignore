@@ -19,12 +19,12 @@ storage/*.cache
 /public/build
 /public/hot
 
+# Storage público (se genera con storage:link)
+public/storage
+
 # IDE / SO
 /.idea/
 /.vscode/
 /*.swp
 .DS_Store
 Thumbs.db
-
-# Storage público (se genera con storage:link)
-public/storage
