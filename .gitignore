@@ -1,0 +1,30 @@
+# Laravel / PHP
+/vendor/
+/bootstrap/cache/
+/storage/*.key
+/storage/logs/
+storage/*.cache
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/testing/
+/storage/framework/views/
+
+# Archivos sensibles
+.env
+.env.*.local
+.phpunit.result.cache
+
+# Frontend
+/node_modules/
+/public/build
+/public/hot
+
+# IDE / SO
+/.idea/
+/.vscode/
+/*.swp
+.DS_Store
+Thumbs.db
+
+# Storage público (se genera con storage:link)
+public/storage
