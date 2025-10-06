@@ -48,7 +48,7 @@ services:
 
       # Toggle para hacer fresh solo cuando lo necesites
       - key: RUN_FRESH
-        value: "0"   # poné "1" temporalmente para forzar migrate:fresh
+        value: "1"   # poné "1" temporalmente para forzar migrate:fresh
 
     # Se ejecuta después de que el contenedor está arriba y puede hablar con la DB
     postDeployCommand: >
