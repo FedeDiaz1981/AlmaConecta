@@ -120,7 +120,7 @@ Route::get('/diag/pivot', function () use ($safe) {
 |--------------------------------------------------------------------------
 |
 | Tip: Si BYPASS_HOME=1 en env, devolvemos una página mínima para confirmar 200
-| y aislar errores del SearchController/blade. Útil mientras depurás el 500.
+| y aislar errores del SearchController/blade.
 |
 */
 Route::get('/', function () use ($safe) {
