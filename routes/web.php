@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -52,23 +53,54 @@ Route::middleware('auth')->get('/admin-test', fn () => [
 Route::get('/healthz', function () {
     $db = 'down';
     $migrations = null;
+    $pivotId = null;
+    $pivotCount = null;
 
     try {
         DB::select('select 1');
         $db = 'up';
+
         if (Schema::hasTable('migrations')) {
             $migrations = DB::table('migrations')->max('batch');
+        }
+
+        if (Schema::hasTable('profile_service')) {
+            $pivotId = Schema::hasColumn('profile_service', 'id') ? 'present' : 'missing';
+            try {
+                // count(*) seguro, no ordena por ninguna columna
+                $pivotCount = DB::table('profile_service')->count();
+            } catch (\Throwable $e) {
+                $pivotCount = 'error: '.$e->getMessage();
+            }
+        } else {
+            $pivotId = 'table-missing';
         }
     } catch (\Throwable $e) {
         Log::warning('Healthcheck DB error: '.$e->getMessage());
     }
 
     return response()->json([
-        'ok'         => $db === 'up',
-        'app_env'    => config('app.env'),
-        'db'         => $db,
-        'migrations' => $migrations,
+        'ok'           => $db === 'up',
+        'app_env'      => config('app.env'),
+        'db'           => $db,
+        'migrations'   => $migrations,
+        'pivot_id'     => $pivotId,
+        'pivot_count'  => $pivotCount,
     ], $db === 'up' ? 200 : 503);
+});
+
+// Diagnóstico del pivot (solo lectura, útil mientras depurás)
+Route::get('/diag/pivot', function () use ($safe) {
+    return $safe(function () {
+        if (!Schema::hasTable('profile_service')) {
+            return response()->json(['exists' => false], 200);
+        }
+        return response()->json([
+            'exists'     => true,
+            'has_id_col' => Schema::hasColumn('profile_service', 'id'),
+            'sample'     => DB::table('profile_service')->limit(5)->get(['profile_id','service_id']),
+        ], 200);
+    });
 });
 
 /*
