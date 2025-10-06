@@ -6,30 +6,36 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('cache', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->mediumText('value');
-            $table->integer('expiration');
-        });
+        // Si la tabla ya existe (de un deploy previo), no la volvemos a crear
+        if (Schema::hasTable('cache')) {
+            // Opcional: asegurar columnas mínimas si tuvieras una tabla creada a mano
+            Schema::table('cache', function (Blueprint $t) {
+                if (! Schema::hasColumn('cache', 'key')) {
+                    $t->string('key');
+                }
+                if (! Schema::hasColumn('cache', 'value')) {
+                    $t->text('value');
+                }
+                if (! Schema::hasColumn('cache', 'expiration')) {
+                    $t->integer('expiration');
+                }
+            });
 
-        Schema::create('cache_locks', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->string('owner');
-            $table->integer('expiration');
+            return;
+        }
+
+        Schema::create('cache', function (Blueprint $t) {
+            // Esquema por defecto de Laravel
+            $t->string('key')->primary();
+            $t->text('value');
+            $t->integer('expiration')->index();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('cache');
-        Schema::dropIfExists('cache_locks');
     }
 };
