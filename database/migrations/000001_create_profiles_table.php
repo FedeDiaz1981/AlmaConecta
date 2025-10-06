@@ -6,47 +6,54 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
-    public function up(): void {
-    Schema::create('profiles', function (Blueprint $t) {
-    $t->id();
+    public function up(): void
+    {
+        Schema::create('profiles', function (Blueprint $t) {
+            $t->id();
 
-    // 1:1 con users; explícito el nombre de la tabla y UNIQUE
-    $t->foreignId('user_id')
-        ->constrained('users')
-        ->cascadeOnDelete()
-        ->unique();
+            // 1:1 con users; explícito el nombre de la tabla y UNIQUE
+            // $t->foreignId('user_id')
+            //     ->constrained('users')
+            //     ->cascadeOnDelete()
+            //     ->unique();
 
-    $t->string('display_name');
-    $t->string('slug')->unique();
-    $t->text('about')->nullable();
+            $t->unsignedBigInteger('user_id'); // sin constrained()
+            $t->index('user_id');
 
-    $t->boolean('mode_presential')->default(true);
-    $t->boolean('mode_remote')->default(false);
+            $t->string('display_name');
+            $t->string('slug')->unique();
+            $t->text('about')->nullable();
 
-    $t->string('country', 2)->default('AR');
-    $t->string('state')->nullable();
-    $t->string('city')->nullable();
-    $t->string('address')->nullable();
+            $t->boolean('mode_presential')->default(true);
+            $t->boolean('mode_remote')->default(false);
 
-    // Coordenadas (NUMERIC en PG)
-    $t->decimal('lat', 10, 7)->nullable();
-    $t->decimal('lng', 10, 7)->nullable();
+            $t->string('country', 2)->default('AR');
+            $t->string('state')->nullable();
+            $t->string('city')->nullable();
+            $t->string('address')->nullable();
 
-    // Si querés portabilidad total podés cambiar estos enum por string+validación app.
-    $t->enum('template_key', ['a','b'])->default('a');
-    $t->enum('status', ['pending','approved','rejected'])->default('pending')->index();
+            // Coordenadas (NUMERIC en PG)
+            $t->decimal('lat', 10, 7)->nullable();
+            $t->decimal('lng', 10, 7)->nullable();
 
-    $t->timestamp('approved_at')->nullable();
-    $t->timestamps();
-});
+            // Si querés portabilidad total podés cambiar estos enum por string+validación app.
+            $t->enum('template_key', ['a', 'b'])->default('a');
+            $t->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->index();
 
-    // FULLTEXT solo en MySQL
-    if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
-        \Illuminate\Support\Facades\DB::statement(
-            'ALTER TABLE profiles ADD FULLTEXT fulltext_profile (display_name, about)'
-        );
+            $t->timestamp('approved_at')->nullable();
+            $t->timestamps();
+        });
+
+        // FULLTEXT solo en MySQL
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+            \Illuminate\Support\Facades\DB::statement(
+                'ALTER TABLE profiles ADD FULLTEXT fulltext_profile (display_name, about)'
+            );
+        }
     }
-}
 
-    public function down(): void { Schema::dropIfExists('profiles'); }
+    public function down(): void
+    {
+        Schema::dropIfExists('profiles');
+    }
 };
