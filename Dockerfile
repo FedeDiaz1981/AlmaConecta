@@ -36,12 +36,18 @@ COPY --from=vendor /app/vendor /var/www/html/vendor
 # Assets de Vite
 COPY --from=frontend /app/public/build /var/www/html/public/build
 
-# Permisos Laravel
+# Permisos Laravel (ACTUALIZADO)
 RUN set -eux; \
-    mkdir -p storage/app/public storage/framework/{cache,sessions,views} storage/logs bootstrap/cache; \
+    mkdir -p \
+      storage/app/public \
+      storage/framework/cache/data \
+      storage/framework/sessions \
+      storage/framework/views \
+      storage/logs \
+      bootstrap/cache; \
     chown -R www-data:www-data storage bootstrap/cache; \
     chmod -R 775 storage bootstrap/cache
-
+    
 # Evitamos caches viejos; si algo falla, no rompas el build
 RUN php artisan package:discover --ansi || true \
  && php artisan config:clear        || true \
