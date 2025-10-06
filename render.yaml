@@ -1,31 +1,65 @@
+databases:
+  - name: alma-db
+    plan: free
+    databaseName: alma
+    ipAllowList: []   # o tu lista de IPs permitidas
+
 services:
   - type: web
-    name: alma-staging
-    runtime: php
+    name: almaconecta-1
+    env: docker
     plan: free
-    buildCommand: |
-      composer install --no-dev --optimize-autoloader
-      # npm ci && npm run build
-      php artisan key:generate --force
-    startCommand: >
-      php artisan migrate --force &&
-      php artisan storage:link || true &&
-      php artisan serve --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
+
+    # (Opcional pero útil) Health check para que Render espere a que la app responda
+    healthCheckPath: /
+
     envVars:
       - key: APP_ENV
-        value: staging
+        value: production
       - key: APP_DEBUG
-        value: true
-      - key: QUEUE_CONNECTION
-        value: sync
-      - key: SESSION_DRIVER
-        value: cookie
-      - key: CACHE_DRIVER
-        value: file
-      - key: MAIL_MAILER
-        value: log
-    autoDeploy: true
-    disk:
-      name: storage
-      mountPath: /opt/render/project/src/storage
-      sizeGB: 1
+        value: false
+      - key: APP_KEY        # definilo en el dashboard (no lo guardes en git)
+        sync: false
+
+      # Conexión a la DB administrada por Render
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: alma-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: alma-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: alma-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: alma-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: alma-db
+          property: password
+
+      # Toggle para hacer fresh solo cuando lo necesites
+      - key: RUN_FRESH
+        value: "0"   # poné "1" temporalmente para forzar migrate:fresh
+
+    # Se ejecuta después de que el contenedor está arriba y puede hablar con la DB
+    postDeployCommand: >
+      /bin/bash -lc '
+        php artisan config:cache &&
+        php artisan route:cache &&
+        if [ "$RUN_FRESH" = "1" ]; then
+          echo "Running migrate:fresh --force";
+          php artisan migrate:fresh --force;
+        else
+          echo "Running migrate --force";
+          php artisan migrate --force;
+        fi
+      '
