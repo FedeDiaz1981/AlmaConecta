@@ -6,32 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        Schema::create('edits', function (Blueprint $t) {
-            $t->id();
+        if (!Schema::hasTable('edits')) {
+            Schema::create('edits', function (Blueprint $t) {
+                $t->id();
 
-            // Depende de 'profiles' (asegurate de que la migración de profiles corra antes)
-            $t->foreignId('profile_id')
-              ->constrained('profiles') // references id on profiles
-              ->cascadeOnDelete();
+                // FK a profiles (debe existir antes)
+                $t->foreignId('profile_id')
+                  ->constrained('profiles')
+                  ->cascadeOnDelete();
 
-            $t->json('payload');
-            $t->enum('status', ['pending','approved','rejected'])->default('pending');
+                $t->json('payload');
+                $t->enum('status', ['pending','approved','rejected'])->default('pending');
 
-            // columna + FK explícita a users; null si se borra el revisor
-            $t->foreignId('reviewed_by')->nullable();
-            $t->foreign('reviewed_by')
-              ->references('id')->on('users')
-              ->nullOnDelete();
+                // Revisor opcional; si se borra el user, queda en NULL
+                $t->foreignId('reviewed_by')
+                  ->nullable()
+                  ->constrained('users')
+                  ->nullOnDelete();
 
-            $t->timestamp('reviewed_at')->nullable();
-            $t->text('reason')->nullable();
+                $t->timestamp('reviewed_at')->nullable();
+                $t->text('reason')->nullable();
 
-            $t->timestamps();
-
-            // índices útiles
-            $t->index('status');
-            $t->index('reviewed_by');
-        });
+                $t->timestamps();
+            });
+        }
     }
 
     public function down(): void {
