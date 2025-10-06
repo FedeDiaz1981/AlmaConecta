@@ -2,28 +2,39 @@ databases:
   - name: alma-db
     plan: free
     databaseName: alma
-    ipAllowList: []   # o tu lista de IPs permitidas
+    ipAllowList: []
 
 services:
   - type: web
     name: almaconecta-1
     env: docker
     plan: free
-    releaseCommand: >
-      bash -lc '
-        php artisan migrate:status || true;
-        if [ "${RUN_FRESH:-0}" = "1" ]; then
-          echo "RUN_FRESH=1 → php artisan migrate:fresh --force";
-          php artisan migrate:fresh --force;
-        else
-          echo "RUN_FRESH not set → php artisan migrate --force";
-          php artisan migrate --force;
-        fi
-        php artisan migrate:status || true
-      '
     dockerfilePath: ./Dockerfile
 
-    # (Opcional pero útil) Health check para que Render espere a que la app responda
+    # Único lugar donde corren las migraciones
+    releaseCommand: >
+      bash -lc '
+        echo "==> Waiting for DB...";
+        for i in {1..30}; do
+          php artisan migrate:status >/dev/null 2>&1 && break || true;
+          echo "DB not ready, retrying ($i/30)..."; sleep 2;
+        done;
+
+        php artisan optimize:clear || true;
+
+        if [ "${RUN_FRESH:-0}" = "1" ]; then
+          echo "==> RUN_FRESH=1 → php artisan migrate:fresh --force";
+          php artisan migrate:fresh --force --no-interaction;
+          php artisan db:seed --force || true;
+        else
+          echo "==> RUN_FRESH!=1 → php artisan migrate --force";
+          php artisan migrate --force --no-interaction;
+        fi
+
+        php artisan storage:link || true;
+      '
+
+    # Healthcheck para que Render espere a que responda
     healthCheckPath: /
 
     envVars:
@@ -31,10 +42,10 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
-      - key: APP_KEY        # definilo en el dashboard (no lo guardes en git)
+      - key: APP_KEY
         sync: false
 
-      # Conexión a la DB administrada por Render
+      # Conexión a la DB de Render
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -58,20 +69,6 @@ services:
           name: alma-db
           property: password
 
-      # Toggle para hacer fresh solo cuando lo necesites
+      # Actívalo SOLO para el reset inicial; luego ponlo en "0" o elimínalo
       - key: RUN_FRESH
-        value: "1"   # poné "1" temporalmente para forzar migrate:fresh
-
-    # Se ejecuta después de que el contenedor está arriba y puede hablar con la DB
-    postDeployCommand: >
-      /bin/bash -lc '
-        php artisan config:cache &&
-        php artisan route:cache &&
-        if [ "$RUN_FRESH" = "1" ]; then
-          echo "Running migrate:fresh --force";
-          php artisan migrate:fresh --force;
-        else
-          echo "Running migrate --force";
-          php artisan migrate --force;
-        fi
-      '
+        value: "1"
