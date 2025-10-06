@@ -48,4 +48,9 @@ RUN php artisan package:discover --ansi || true && \
 EXPOSE 80
 
 # Arranque: migraciones + symlink y Apache
-CMD bash -lc "php artisan migrate --force || true; php artisan storage:link || true; apache2-foreground"
+CMD bash -lc '\
+  for i in {1..30}; do \
+    php artisan migrate --force && break || (echo "DB not ready, retrying..." && sleep 2); \
+  done; \
+  php artisan storage:link || true; \
+  apache2-foreground'
