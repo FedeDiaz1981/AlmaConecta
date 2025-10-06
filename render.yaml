@@ -2,50 +2,75 @@ databases:
   - name: alma-db
     plan: free
     databaseName: alma
-    ipAllowList: []
+    ipAllowList: []  # agrega IPs si las necesitás
 
 services:
   - type: web
     name: almaconecta-1
     env: docker
     plan: free
-    dockerfilePath: ./Dockerfile
 
-    # Único lugar donde corren las migraciones
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+
+    # Ejecuta migraciones en el "release phase" antes de arrancar la app
     releaseCommand: >
       bash -lc '
-        echo "==> Waiting for DB...";
-        for i in {1..30}; do
-          php artisan migrate:status >/dev/null 2>&1 && break || true;
-          echo "DB not ready, retrying ($i/30)..."; sleep 2;
-        done;
+        set -e
 
-        php artisan optimize:clear || true;
+        echo "==> Clearing Laravel caches"
+        php artisan optimize:clear || true
+
+        echo "==> Waiting for database to be ready..."
+        for i in {1..30}; do
+          if php artisan migrate:status >/dev/null 2>&1; then
+            echo "DB is reachable."
+            break
+          fi
+          echo "DB not ready, retrying ($i/30)..."
+          sleep 2
+        done
 
         if [ "${RUN_FRESH:-0}" = "1" ]; then
-          echo "==> RUN_FRESH=1 → php artisan migrate:fresh --force";
-          php artisan migrate:fresh --force --no-interaction;
-          php artisan db:seed --force || true;
+          echo "RUN_FRESH=1 → php artisan migrate:fresh --force"
+          php artisan migrate:fresh --force
         else
-          echo "==> RUN_FRESH!=1 → php artisan migrate --force";
-          php artisan migrate --force --no-interaction;
+          echo "RUN_FRESH not set → php artisan migrate --force"
+          php artisan migrate --force
         fi
 
-        php artisan storage:link || true;
-      '
+        echo "==> Storage symlink"
+        php artisan storage:link || true
 
-    # Healthcheck para que Render espere a que responda
-    healthCheckPath: /
+        echo "==> Rebuilding caches"
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+      '
 
     envVars:
       - key: APP_ENV
         value: production
+
+      # ⚠️ Dejalo en "true" sólo mientras estás depurando errores 500.
       - key: APP_DEBUG
-        value: false
+        value: "true"
+
+      # Setealo en el dashboard (no en git). Formato típico: base64:XXXXXXXX
       - key: APP_KEY
         sync: false
 
-      # Conexión a la DB de Render
+      # Útil para generar URLs absolutas correctas
+      - key: APP_URL
+        value: https://almaconecta-1.onrender.com
+
+      # Logs de Laravel a stderr (aparecen en Logs de Render)
+      - key: LOG_CHANNEL
+        value: errorlog
+      - key: LOG_LEVEL
+        value: debug
+
+      # Conexión a la DB administrada por Render
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -69,6 +94,7 @@ services:
           name: alma-db
           property: password
 
-      # Actívalo SOLO para el reset inicial; luego ponlo en "0" o elimínalo
+      # Fuerza reset completo de tablas en el próximo deploy
+      # Cambialo a "0" cuando ya esté estable.
       - key: RUN_FRESH
         value: "1"

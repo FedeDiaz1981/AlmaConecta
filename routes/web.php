@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -10,6 +12,27 @@ use App\Http\Controllers\ProviderProfileController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
 use App\Http\Controllers\AdminEditController;
+
+/*
+|--------------------------------------------------------------------------
+| Helper simple para envolver acciones y evitar 500 silenciosos
+|--------------------------------------------------------------------------
+*/
+$safe = function ($action) {
+    try {
+        return $action();
+    } catch (\Throwable $e) {
+        report($e);
+
+        if (config('app.debug')) {
+            // En debug mostramos el mensaje para inspeccionar rápido en Render
+            return response('Internal error: '.$e->getMessage(), 500);
+        }
+
+        // En prod, una respuesta simple sin filtrar detalles
+        return response('Service temporarily unavailable', 503);
+    }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -25,14 +48,45 @@ Route::middleware('auth')->get('/admin-test', fn () => [
     'allows_admin'  => Gate::allows('admin'),
 ]);
 
+// Healthcheck para Render/monitoreo
+Route::get('/healthz', function () {
+    $db = 'down';
+    $migrations = null;
+
+    try {
+        DB::select('select 1');
+        $db = 'up';
+        if (Schema::hasTable('migrations')) {
+            $migrations = DB::table('migrations')->max('batch');
+        }
+    } catch (\Throwable $e) {
+        Log::warning('Healthcheck DB error: '.$e->getMessage());
+    }
+
+    return response()->json([
+        'ok'         => $db === 'up',
+        'app_env'    => config('app.env'),
+        'db'         => $db,
+        'migrations' => $migrations,
+    ], $db === 'up' ? 200 : 503);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Público
 |--------------------------------------------------------------------------
 */
-Route::get('/', [SearchController::class, 'home'])->name('home');
-Route::get('/search', [SearchController::class, 'search'])->name('search');
-Route::get('/p/{slug}', [SearchController::class, 'show'])->name('profiles.show');
+Route::get('/', function () use ($safe) {
+    return $safe(fn () => app(SearchController::class)->home(request()));
+})->name('home');
+
+Route::get('/search', function () use ($safe) {
+    return $safe(fn () => app(SearchController::class)->search(request()));
+})->name('search');
+
+Route::get('/p/{slug}', function (string $slug) use ($safe) {
+    return $safe(fn () => app(SearchController::class)->show($slug));
+})->where('slug', '[A-Za-z0-9\-]+')->name('profiles.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -89,7 +143,6 @@ Route::middleware(['auth', 'can:admin'])
         Route::post('/users/{user}/reject',   [UserApprovalController::class, 'reject'])->name('users.reject');
         Route::post('/users/{user}/suspend',  [UserApprovalController::class, 'suspend'])->name('users.suspend');
         Route::post('/users/{user}/activate', [UserApprovalController::class, 'activate'])->name('users.activate');
-        // Eliminar usuario (botón "Eliminar" del dashboard)
         Route::delete('/users/{user}',        [UserApprovalController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/edits', [AdminEditController::class, 'index'])->name('edits.index');
