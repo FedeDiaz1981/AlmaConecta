@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -16,7 +17,7 @@ use App\Http\Controllers\AdminEditController;
 
 /*
 |--------------------------------------------------------------------------
-| Helper simple para envolver acciones y evitar 500 silenciosos
+| Helper para evitar 500 silenciosos
 |--------------------------------------------------------------------------
 */
 $safe = function ($action) {
@@ -26,18 +27,15 @@ $safe = function ($action) {
         report($e);
 
         if (config('app.debug')) {
-            // En debug mostramos el mensaje para inspeccionar rápido en Render
             return response('Internal error: '.$e->getMessage(), 500);
         }
-
-        // En prod, una respuesta simple sin filtrar detalles
         return response('Service temporarily unavailable', 503);
     }
 };
 
 /*
 |--------------------------------------------------------------------------
-| Diagnóstico
+| Rutas de diagnóstico
 |--------------------------------------------------------------------------
 */
 Route::get('/whoami', fn () => auth()->check()
@@ -67,7 +65,6 @@ Route::get('/healthz', function () {
         if (Schema::hasTable('profile_service')) {
             $pivotId = Schema::hasColumn('profile_service', 'id') ? 'present' : 'missing';
             try {
-                // count(*) seguro, no ordena por ninguna columna
                 $pivotCount = DB::table('profile_service')->count();
             } catch (\Throwable $e) {
                 $pivotCount = 'error: '.$e->getMessage();
@@ -89,7 +86,21 @@ Route::get('/healthz', function () {
     ], $db === 'up' ? 200 : 503);
 });
 
-// Diagnóstico del pivot (solo lectura, útil mientras depurás)
+// Ver último log de Laravel (solo en debug)
+Route::get('/__log', function () {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+    $path = storage_path('logs/laravel.log');
+    if (!is_file($path)) {
+        return response("No hay laravel.log aún.", 200);
+    }
+    $content = @file_get_contents($path);
+    $tail = Str::of($content)->substr(-20000); // últimos ~20 KB
+    return response("<pre>".e($tail)."</pre>", 200)->header('Content-Type', 'text/html');
+});
+
+// Diagnóstico del pivot (solo lectura)
 Route::get('/diag/pivot', function () use ($safe) {
     return $safe(function () {
         if (!Schema::hasTable('profile_service')) {
@@ -107,8 +118,27 @@ Route::get('/diag/pivot', function () use ($safe) {
 |--------------------------------------------------------------------------
 | Público
 |--------------------------------------------------------------------------
+|
+| Tip: Si BYPASS_HOME=1 en env, devolvemos una página mínima para confirmar 200
+| y aislar errores del SearchController/blade. Útil mientras depurás el 500.
+|
 */
 Route::get('/', function () use ($safe) {
+    if (env('BYPASS_HOME', false)) {
+        // Ping DB simple para asegurar conexión
+        try {
+            $now = DB::select('select now() as now');
+            $dbNow = $now[0]->now ?? null;
+        } catch (\Throwable $e) {
+            $dbNow = 'db-error: '.$e->getMessage();
+        }
+
+        return response()->view('welcome', [
+            'status' => 'OK',
+            'db_now' => $dbNow,
+        ], 200);
+    }
+
     return $safe(fn () => app(SearchController::class)->home(request()));
 })->name('home');
 
@@ -123,9 +153,6 @@ Route::get('/p/{slug}', function (string $slug) use ($safe) {
 /*
 |--------------------------------------------------------------------------
 | Dashboard
-| - Admin  -> /admin
-| - Provider -> edición de perfil
-| - Otros -> dashboard básico
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function () {
