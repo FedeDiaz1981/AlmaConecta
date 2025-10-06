@@ -9,6 +9,18 @@ services:
     name: almaconecta-1
     env: docker
     plan: free
+    releaseCommand: >
+      bash -lc '
+        php artisan migrate:status || true;
+        if [ "${RUN_FRESH:-0}" = "1" ]; then
+          echo "RUN_FRESH=1 → php artisan migrate:fresh --force";
+          php artisan migrate:fresh --force;
+        else
+          echo "RUN_FRESH not set → php artisan migrate --force";
+          php artisan migrate --force;
+        fi
+        php artisan migrate:status || true
+      '
     dockerfilePath: ./Dockerfile
 
     # (Opcional pero útil) Health check para que Render espere a que la app responda
