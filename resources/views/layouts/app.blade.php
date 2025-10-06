@@ -11,8 +11,17 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <!-- Assets -->
+        @if (app()->environment('production') && !file_exists(public_path('build/manifest.json')))
+            {{-- Fallback si no existe el build de Vite en producción --}}
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css">
+            <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        @else
+            {{-- Desarrollo o producción con build presente --}}
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @endif
+
+        @stack('head')
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
@@ -32,5 +41,7 @@
                 {{ $slot }}
             </main>
         </div>
+
+        @stack('scripts')
     </body>
 </html>
