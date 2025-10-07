@@ -94,13 +94,15 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Provincia/Estado</label>
-                        <input name="state" class="border p-2 rounded w-full"
+                        <input name="state" class="border p-2 rounded w-full" list="stateList"
                                value="{{ old('state',$profile->state) }}" {{ $locked ? 'disabled' : '' }}>
+                        <datalist id="stateList"></datalist>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Ciudad</label>
-                        <input name="city" class="border p-2 rounded w-full"
+                        <input name="city" class="border p-2 rounded w-full" list="cityList"
                                value="{{ old('city',$profile->city) }}" {{ $locked ? 'disabled' : '' }}>
+                        <datalist id="cityList"></datalist>
                     </div>
                 </div>
 
@@ -108,6 +110,14 @@
                     <label class="block text-sm font-medium mb-1">Dirección</label>
                     <input name="address" class="border p-2 rounded w-full"
                            value="{{ old('address',$profile->address) }}" {{ $locked ? 'disabled' : '' }}>
+                    {{-- Coordenadas (se completan solas) --}}
+                    <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
+                    <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Coordenadas: <span id="latlngText">
+                            {{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}
+                        </span>
+                    </p>
                 </div>
 
                 {{-- WhatsApp + Email --}}
@@ -176,4 +186,111 @@
             </form>
         </div>
     </div>
+
+    {{-- Geocoding + Autocompletado (Nominatim / OSM) --}}
+    <script>
+    (function(){
+        const locked = @json($locked);
+        if (locked) return;
+
+        const countryEl = document.querySelector('[name="country"]');
+        const stateEl   = document.querySelector('[name="state"]');
+        const cityEl    = document.querySelector('[name="city"]');
+        const addrEl    = document.querySelector('[name="address"]');
+        const latEl     = document.getElementById('lat');
+        const lngEl     = document.getElementById('lng');
+        const latlngTxt = document.getElementById('latlngText');
+        const stateList = document.getElementById('stateList');
+        const cityList  = document.getElementById('cityList');
+
+        const debounce = (fn, ms=800) => {
+            let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); };
+        };
+
+        async function nominatimSearch(q){
+            if(!q || q.trim().length < 2) return [];
+            const url = new URL('https://nominatim.openstreetmap.org/search');
+            url.search = new URLSearchParams({
+                format: 'json',
+                addressdetails: 1,
+                limit: 5,
+                q: q,
+                // opcional: identificá tu app (mejor práctica)
+                email: 'admin@tu-dominio.com'
+            });
+            try {
+                const r = await fetch(url, {headers:{'Accept':'application/json'}});
+                if(!r.ok) return [];
+                return await r.json();
+            } catch { return []; }
+        }
+
+        function setLatLng(lat,lng){
+            if(lat==null || lng==null) return;
+            latEl.value = Number(lat).toFixed(7);
+            lngEl.value = Number(lng).toFixed(7);
+            if (latlngTxt) latlngTxt.textContent = `${latEl.value}, ${lngEl.value}`;
+        }
+
+        // ---- Autocompletar PROVINCIA ----
+        const suggestStates = debounce(async ()=>{
+            stateList.innerHTML = '';
+            const q = `${stateEl.value || ''} ${countryEl.value || ''}`.trim();
+            if(!q) return;
+            const res = await nominatimSearch(q);
+            const seen = new Set();
+            res.forEach(item=>{
+                const st = item.address?.state;
+                if(st && !seen.has(st)){
+                    seen.add(st);
+                    const opt = document.createElement('option');
+                    opt.value = st;
+                    stateList.appendChild(opt);
+                }
+            });
+        });
+
+        // ---- Autocompletar CIUDAD ----
+        const suggestCities = debounce(async ()=>{
+            cityList.innerHTML = '';
+            const q = `${cityEl.value || ''} ${stateEl.value || ''} ${countryEl.value || ''}`.trim();
+            if(!q) return;
+            const res = await nominatimSearch(q);
+            const seen = new Set();
+            res.forEach(item=>{
+                const a = item.address || {};
+                const city = a.city || a.town || a.village || a.hamlet;
+                if(city && !seen.has(city)){
+                    seen.add(city);
+                    const opt = document.createElement('option');
+                    opt.value = city;
+                    cityList.appendChild(opt);
+                }
+            });
+        });
+
+        // ---- Geocodificar dirección completa -> lat/lng ----
+        const geocodeFull = debounce(async ()=>{
+            const q = [addrEl.value, cityEl.value, stateEl.value, countryEl.value].filter(Boolean).join(', ');
+            if(!q) return;
+            const res = await nominatimSearch(q);
+            if(res.length){
+                setLatLng(res[0].lat, res[0].lon);
+            }
+        });
+
+        // Eventos
+        stateEl.addEventListener('input', suggestStates);
+        cityEl.addEventListener('input', suggestCities);
+
+        [countryEl, stateEl, cityEl, addrEl].forEach(el=>{
+            el.addEventListener('change', geocodeFull);
+            el.addEventListener('blur', geocodeFull);
+            el.addEventListener('input', debounce(()=>{}, 200)); // solo para activar debounce base
+        });
+
+        // Geocodificar al cargar si ya hay datos
+        geocodeFull();
+    })();
+    </script>
 </x-app-layout>
