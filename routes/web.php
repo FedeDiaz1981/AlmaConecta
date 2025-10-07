@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -14,64 +15,141 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
 use App\Http\Controllers\AdminEditController;
 
-// Auth (Breeze/Fortify) controllers
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
+/*
+|--------------------------------------------------------------------------
+| Helper para evitar 500 silenciosos
+|--------------------------------------------------------------------------
+*/
+$safe = function ($action) {
+    try {
+        return $action();
+    } catch (\Throwable $e) {
+        report($e);
+
+        if (config('app.debug')) {
+            return response('Internal error: '.$e->getMessage(), 500);
+        }
+        return response('Service temporarily unavailable', 503);
+    }
+};
 
 /*
 |--------------------------------------------------------------------------
-| Diagnóstico mínimo
+| Diagnóstico
 |--------------------------------------------------------------------------
 */
-Route::get('/whoami', function () {
-    if (!auth()->check()) return ['guest' => true];
-    return auth()->user()->only(['id','email','role','account_status']);
-})->name('whoami');
+Route::get('/whoami', fn () => auth()->check()
+    ? auth()->user()->only(['id','email','role','account_status'])
+    : ['guest' => true]);
 
-Route::middleware('auth')->get('/admin-test', function () {
-    return [
-        'user'         => auth()->user()->only(['email','role','account_status']),
-        'allows_admin' => Gate::allows('admin'),
-    ];
-})->name('admin.test');
+Route::middleware('auth')->get('/admin-test', fn () => [
+    'user'          => auth()->user()->only(['email','role','account_status']),
+    'allows_admin'  => Gate::allows('admin'),
+]);
 
-/**
- * Healthcheck para Render/monitoreo
- * - Respuesta JSON sin vistas
- */
+// Healthcheck para Render/monitoreo
 Route::get('/healthz', function () {
     $db = 'down';
     $migrations = null;
+    $pivotId = null;
+    $pivotCount = null;
 
     try {
         DB::select('select 1');
         $db = 'up';
+
         if (Schema::hasTable('migrations')) {
             $migrations = DB::table('migrations')->max('batch');
+        }
+
+        if (Schema::hasTable('profile_service')) {
+            $pivotId = Schema::hasColumn('profile_service', 'id') ? 'present' : 'missing';
+            try {
+                $pivotCount = DB::table('profile_service')->count();
+            } catch (\Throwable $e) {
+                $pivotCount = 'error: '.$e->getMessage();
+            }
+        } else {
+            $pivotId = 'table-missing';
         }
     } catch (\Throwable $e) {
         Log::warning('Healthcheck DB error: '.$e->getMessage());
     }
 
     return response()->json([
-        'ok'         => $db === 'up',
-        'app_env'    => config('app.env'),
-        'db'         => $db,
-        'migrations' => $migrations,
+        'ok'           => $db === 'up',
+        'app_env'      => config('app.env'),
+        'db'           => $db,
+        'migrations'   => $migrations,
+        'pivot_id'     => $pivotId,
+        'pivot_count'  => $pivotCount,
     ], $db === 'up' ? 200 : 503);
-})->name('healthz');
+});
+
+// Ver último log de Laravel (solo en debug)
+Route::get('/__log', function () {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+    $path = storage_path('logs/laravel.log');
+    if (!is_file($path)) {
+        return response("No hay laravel.log aún.", 200);
+    }
+    $content = @file_get_contents($path);
+    $tail = Str::of($content)->substr(-20000);
+    return response("<pre>".e($tail)."</pre>", 200)->header('Content-Type', 'text/html');
+});
+
+// Diagnóstico del pivot (solo lectura)
+Route::get('/diag/pivot', function () use ($safe) {
+    return $safe(function () {
+        if (!Schema::hasTable('profile_service')) {
+            return response()->json(['exists' => false], 200);
+        }
+        return response()->json([
+            'exists'     => true,
+            'has_id_col' => Schema::hasColumn('profile_service', 'id'),
+            'sample'     => DB::table('profile_service')->limit(5)->get(['profile_id','service_id']),
+        ], 200);
+    });
+});
 
 /*
 |--------------------------------------------------------------------------
 | Público
 |--------------------------------------------------------------------------
+|
+| Tip: si BYPASS_HOME=1 (env), devolvemos una página mínima para aislar
+| errores del SearchController/blade mientras depurás.
+|
 */
-Route::get('/', [SearchController::class, 'home'])->name('home');
-Route::get('/search', [SearchController::class, 'search'])->name('search');
+Route::get('/', function () use ($safe) {
+    if (env('BYPASS_HOME', false)) {
+        try {
+            $now = DB::select('select now() as now');
+            $dbNow = $now[0]->now ?? null;
+        } catch (\Throwable $e) {
+            $dbNow = 'db-error: '.$e->getMessage();
+        }
 
-Route::get('/p/{slug}', [SearchController::class, 'show'])
-    ->where('slug', '[^/]+') // acepta cualquier carácter excepto "/"
-    ->name('profiles.show');
+        return response()->view('welcome', [
+            'status' => 'OK',
+            'db_now' => $dbNow,
+        ], 200);
+    }
+
+    return $safe(fn () => app(SearchController::class)->home(request()));
+})->name('home');
+
+// Búsqueda (GET)
+Route::get('/search', function () use ($safe) {
+    return $safe(fn () => app(SearchController::class)->search(request()));
+})->name('search');
+
+// Perfil público por slug
+Route::get('/p/{slug}', function (string $slug) use ($safe) {
+    return $safe(fn () => app(SearchController::class)->show($slug));
+})->where('slug', '[A-Za-z0-9\-]+')->name('profiles.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -99,13 +177,13 @@ Route::get('/dashboard', function () {
 */
 Route::middleware('auth')->group(function () {
     // Perfil de cuenta
-    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile',[ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Perfil profesional
-    Route::get('/dashboard/profile',         [ProviderProfileController::class, 'edit'])->name('dashboard.profile.edit');
-    Route::post('/dashboard/profile',        [ProviderProfileController::class, 'saveDraft'])->name('dashboard.profile.save');
+    Route::get('/dashboard/profile', [ProviderProfileController::class, 'edit'])->name('dashboard.profile.edit');
+    Route::post('/dashboard/profile', [ProviderProfileController::class, 'saveDraft'])->name('dashboard.profile.save');
     Route::post('/dashboard/profile/cancel', [ProviderProfileController::class, 'cancelPending'])->name('dashboard.profile.cancel');
 });
 
@@ -134,41 +212,9 @@ Route::middleware(['auth', 'can:admin'])
 
 /*
 |--------------------------------------------------------------------------
-| Auth (Breeze)
+| Auth (Breeze/Laravel)
 |--------------------------------------------------------------------------
+| Aquí se registran: GET /login, POST /login, GET /register, POST /register,
+| POST /logout, Forgot Password, etc.
 */
 require __DIR__ . '/auth.php';
-
-/*
-|--------------------------------------------------------------------------
-| Rutas explícitas de login/register (solo si no existen)
-|--------------------------------------------------------------------------
-*/
-if (!Route::has('login')) {
-    Route::middleware('guest')->group(function () {
-        Route::get('/login',  [AuthenticatedSessionController::class, 'create'])->name('login');
-        Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-    });
-}
-
-if (!Route::has('register')) {
-    Route::middleware('guest')->group(function () {
-        Route::get('/register',  [RegisteredUserController::class, 'create'])->name('register');
-        Route::post('/register', [RegisteredUserController::class, 'store']);
-    });
-}
-
-if (!Route::has('logout')) {
-    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->middleware('auth')
-        ->name('logout');
-}
-
-/*
-|--------------------------------------------------------------------------
-| Fallback 404
-|--------------------------------------------------------------------------
-*/
-Route::fallback(function () {
-    abort(404);
-});
