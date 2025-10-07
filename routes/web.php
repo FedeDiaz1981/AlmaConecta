@@ -188,9 +188,12 @@ Route::get('/search', function () use ($safe) {
 })->name('search');
 
 // Perfil público por slug (pasando también el Request)
-Route::get('/p/{slug}', function (string $slug) use ($safe) {
-    return $safe(fn () => app(SearchController::class)->show(request(), $slug));
-})->where('slug', '[A-Za-z0-9\-]+')->name('profiles.show');
+// Route::get('/p/{slug}', function (string $slug) use ($safe) {
+//     return $safe(fn () => app(SearchController::class)->show(request(), $slug));
+// })->where('slug', '[A-Za-z0-9\-]+')->name('profiles.show');
+Route::get('/p/{slug}', [\App\Http\Controllers\SearchController::class, 'show'])
+    ->where('slug', '[A-Za-z0-9\-]+')
+    ->name('profiles.show');
 
 /*
 |--------------------------------------------------------------------------
