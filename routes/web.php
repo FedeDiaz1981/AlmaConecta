@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ProviderProfileController;
@@ -113,6 +117,43 @@ Route::get('/diag/pivot', function () use ($safe) {
         ], 200);
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| *** Ruta temporal para crear/promover ADMIN (opción A) ***
+| Requiere envs: ADMIN_SEED_TOKEN, ADMIN_EMAIL, ADMIN_PASSWORD
+| Usar 1 vez y luego borrar esta ruta del código.
+|--------------------------------------------------------------------------
+*/
+Route::get('/__seed-admin', function (Request $r) use ($safe) {
+    return $safe(function () use ($r) {
+        $token    = $r->query('token');
+        $expected = env('ADMIN_SEED_TOKEN');
+        abort_unless($token && $expected && hash_equals($expected, $token), 403, 'Forbidden');
+
+        $email = env('ADMIN_EMAIL');
+        $pass  = env('ADMIN_PASSWORD');
+        abort_unless($email && $pass, 422, 'Faltan ADMIN_EMAIL o ADMIN_PASSWORD');
+
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name'              => 'Admin',
+                'password'          => Hash::make($pass),
+                'role'              => 'admin',
+                'account_status'    => 'active',
+                'email_verified_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'ok'    => true,
+            'id'    => $user->id,
+            'email' => $user->email,
+            'role'  => $user->role,
+        ]);
+    });
+})->middleware('throttle:3,1');
 
 /*
 |--------------------------------------------------------------------------
