@@ -17,21 +17,21 @@ class SearchController extends Controller
 
     public function search(Request $request)
     {
-        $q = trim((string) $request->input('q', ''));
+        $q       = trim((string) $request->input('q', ''));
         $locText = trim((string) $request->input('loc', ''));
-        $lat = $request->filled('lat') ? (float) $request->input('lat') : null;
-        $lng = $request->filled('lng') ? (float) $request->input('lng') : null;
-        $radius = max(1, (int) $request->input('r', 25));
-        $remote = (bool) $request->boolean('remote', true);
+        $lat     = $request->filled('lat') ? (float) $request->input('lat') : null;
+        $lng     = $request->filled('lng') ? (float) $request->input('lng') : null;
+        $radius  = max(1, (int) $request->input('r', 25));
+        $remote  = (bool) $request->boolean('remote', true);
 
         // Base
         $base = Profile::query()
             ->with('service')
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'active']) // <-- cambio aquí
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
                     $w->where('display_name', 'like', "%{$q}%")
-                        ->orWhereHas('service', fn($s) => $s->where('name', 'like', "%{$q}%"));
+                      ->orWhereHas('service', fn ($s) => $s->where('name', 'like', "%{$q}%"));
                 });
             });
 
@@ -39,18 +39,18 @@ class SearchController extends Controller
         if ($lat === null || $lng === null) {
             $results = $base->when(
                 $remote,
-                fn($q) => $q->where('mode_remote', true),
-                fn($q) => $q->where('mode_presential', true)
+                fn ($q2) => $q2->where('mode_remote', true),
+                fn ($q2) => $q2->where('mode_presential', true)
             )->latest('id')->paginate(20);
 
             return view('search.results', [
                 'results' => $results,
-                'q' => $q,
-                'loc' => $locText,
-                'lat' => $lat,
-                'lng' => $lng,
-                'r' => $radius,
-                'remote' => $remote,
+                'q'       => $q,
+                'loc'     => $locText,
+                'lat'     => $lat,
+                'lng'     => $lng,
+                'r'       => $radius,
+                'remote'  => $remote,
             ]);
         }
 
@@ -66,14 +66,15 @@ class SearchController extends Controller
                 ->where(function ($w) use ($lat, $lng, $radius, $remote) {
                     $w->where(function ($z) use ($lat, $lng, $radius) {
                         $z->where('mode_presential', true)
-                            ->whereNotNull('lat')->whereNotNull('lng')
-                            ->whereRaw(
-                                "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ) <= ?",
-                                [$lat, $lng, $lat, $radius]
-                            );
+                          ->whereNotNull('lat')->whereNotNull('lng')
+                          ->whereRaw(
+                              "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ) <= ?",
+                              [$lat, $lng, $lat, $radius]
+                          );
                     });
-                    if ($remote)
+                    if ($remote) {
                         $w->orWhere('mode_remote', true);
+                    }
                 })
                 ->orderByRaw('CASE WHEN distance IS NULL THEN 1 ELSE 0 END, distance asc');
 
@@ -90,8 +91,8 @@ class SearchController extends Controller
                 $dLat = deg2rad($lat2 - $lat1);
                 $dLon = deg2rad($lon2 - $lon1);
                 $a = sin($dLat / 2) * sin($dLat / 2) +
-                    cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-                    sin($dLon / 2) * sin($dLon / 2);
+                     cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+                     sin($dLon / 2) * sin($dLon / 2);
                 $c = 2 * asin(min(1, sqrt($a)));
                 return $R * $c;
             };
@@ -101,22 +102,23 @@ class SearchController extends Controller
                 return $p;
             });
 
-            $presentials = $presentials->filter(fn($p) => $p->distance <= $radius);
+            $presentials = $presentials->filter(fn ($p) => $p->distance <= $radius);
 
             $remotes = $remote
                 ? (clone $base)->where('mode_remote', true)->get()->each(function ($p) {
-                    $p->distance = null; })
+                    $p->distance = null;
+                })
                 : collect();
 
             $collection = $presentials->concat($remotes)->unique('id')
-                ->sortBy(fn($p) => $p->distance === null ? PHP_INT_MAX : $p->distance)
+                ->sortBy(fn ($p) => $p->distance === null ? PHP_INT_MAX : $p->distance)
                 ->values();
 
             // Paginar manualmente
-            $page = Paginator::resolveCurrentPage('page');
+            $page    = Paginator::resolveCurrentPage('page');
             $perPage = 20;
-            $total = $collection->count();
-            $items = $collection->forPage($page, $perPage)->values();
+            $total   = $collection->count();
+            $items   = $collection->forPage($page, $perPage)->values();
             $results = new LengthAwarePaginator($items, $total, $perPage, $page, [
                 'path' => Paginator::resolveCurrentPath(),
             ]);
@@ -124,12 +126,12 @@ class SearchController extends Controller
 
         return view('search.results', [
             'results' => $results,
-            'q' => $q,
-            'loc' => $locText,
-            'lat' => $lat,
-            'lng' => $lng,
-            'r' => $radius,
-            'remote' => $remote,
+            'q'       => $q,
+            'loc'     => $locText,
+            'lat'     => $lat,
+            'lng'     => $lng,
+            'r'       => $radius,
+            'remote'  => $remote,
         ]);
     }
 
