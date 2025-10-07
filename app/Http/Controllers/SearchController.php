@@ -27,7 +27,8 @@ class SearchController extends Controller
         // Base
         $base = Profile::query()
             ->with('service')
-            ->whereIn('status', ['approved', 'active']) // incluye 'active'
+            // admití "approved" y también "active" por compatibilidad
+            ->whereIn('status', ['approved', 'active'])
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
                     $w->where('display_name', 'like', "%{$q}%")
@@ -39,8 +40,8 @@ class SearchController extends Controller
         if ($lat === null || $lng === null) {
             $results = $base->when(
                 $remote,
-                fn ($q2) => $q2->where('mode_remote', true),
-                fn ($q2) => $q2->where('mode_presential', true)
+                fn ($q) => $q->where('mode_remote', true),
+                fn ($q) => $q->where('mode_presential', true)
             )->latest('id')->paginate(20);
 
             return view('search.results', [
@@ -54,16 +55,17 @@ class SearchController extends Controller
             ]);
         }
 
-        // CON centro (Postgres/MySQL) — calculamos distancia y ordenamos NULLS LAST (remotos al final)
+        // CON centro
         if (DB::getDriverName() !== 'sqlite') {
-            $distanceExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ))";
+            // --- PostgreSQL/MySQL: usar trigonometría en SQL ---
+            // OJO: sin paréntesis de más
+            $distanceExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ))";
 
-            // Armamos la subconsulta con el alias 'distance'
-            $withDistance = (clone $base)
+            $profiles = (clone $base)
                 ->select('profiles.*')
                 ->selectRaw("$distanceExpr as distance", [$lat, $lng, $lat])
-                ->where(function ($w) use ($lat, $lng, $radius, $distanceExpr, $remote) {
-                    $w->where(function ($z) use ($lat, $lng, $radius, $distanceExpr) {
+                ->where(function ($w) use ($distanceExpr, $lat, $lng, $radius, $remote) {
+                    $w->where(function ($z) use ($distanceExpr, $lat, $lng, $radius) {
                         $z->where('mode_presential', true)
                           ->whereNotNull('lat')->whereNotNull('lng')
                           ->whereRaw("$distanceExpr <= ?", [$lat, $lng, $lat, $radius]);
@@ -71,27 +73,23 @@ class SearchController extends Controller
                     if ($remote) {
                         $w->orWhere('mode_remote', true);
                     }
-                });
+                })
+                ->orderByRaw('CASE WHEN distance IS NULL THEN 1 ELSE 0 END, distance ASC');
 
-            // Ahora envolvemos y ordenamos por el alias sin errores en PG
-            $results = DB::query()
-                ->fromSub($withDistance, 'q')
-                ->orderByRaw('distance NULLS LAST') // nulls (remoto) al final
-                ->paginate(20);
+            $results = $profiles->paginate(20);
         } else {
-            // SQLITE: calcular distancia en PHP
+            // --- SQLITE: calcular distancia en PHP ---
             $presentials = (clone $base)
                 ->where('mode_presential', true)
                 ->whereNotNull('lat')->whereNotNull('lng')
                 ->get();
 
             $haversine = function ($lat1, $lon1, $lat2, $lon2) {
-                $R = 6371; // km
+                $R = 6371;
                 $dLat = deg2rad($lat2 - $lat1);
                 $dLon = deg2rad($lon2 - $lon1);
-                $a = sin($dLat / 2) * sin($dLat / 2) +
-                     cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-                     sin($dLon / 2) * sin($dLon / 2);
+                $a = sin($dLat / 2) ** 2
+                   + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
                 $c = 2 * asin(min(1, sqrt($a)));
                 return $R * $c;
             };
