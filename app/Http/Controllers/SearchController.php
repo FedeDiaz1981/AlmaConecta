@@ -27,7 +27,7 @@ class SearchController extends Controller
         // Base
         $base = Profile::query()
             ->with('service')
-            ->whereIn('status', ['approved', 'active']) // <-- cambio aquí
+            ->whereIn('status', ['approved', 'active']) // incluye 'active'
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
                     $w->where('display_name', 'like', "%{$q}%")
@@ -54,31 +54,30 @@ class SearchController extends Controller
             ]);
         }
 
-        // CON centro
+        // CON centro (Postgres/MySQL) — calculamos distancia y ordenamos NULLS LAST (remotos al final)
         if (DB::getDriverName() !== 'sqlite') {
-            // DB con funciones trigonométricas (MySQL/Postgres)
-            $profiles = (clone $base)
+            $distanceExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ))";
+
+            // Armamos la subconsulta con el alias 'distance'
+            $withDistance = (clone $base)
                 ->select('profiles.*')
-                ->selectRaw(
-                    "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ) as distance",
-                    [$lat, $lng, $lat]
-                )
-                ->where(function ($w) use ($lat, $lng, $radius, $remote) {
-                    $w->where(function ($z) use ($lat, $lng, $radius) {
+                ->selectRaw("$distanceExpr as distance", [$lat, $lng, $lat])
+                ->where(function ($w) use ($lat, $lng, $radius, $distanceExpr, $remote) {
+                    $w->where(function ($z) use ($lat, $lng, $radius, $distanceExpr) {
                         $z->where('mode_presential', true)
                           ->whereNotNull('lat')->whereNotNull('lng')
-                          ->whereRaw(
-                              "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ) ) <= ?",
-                              [$lat, $lng, $lat, $radius]
-                          );
+                          ->whereRaw("$distanceExpr <= ?", [$lat, $lng, $lat, $radius]);
                     });
                     if ($remote) {
                         $w->orWhere('mode_remote', true);
                     }
-                })
-                ->orderByRaw('CASE WHEN distance IS NULL THEN 1 ELSE 0 END, distance asc');
+                });
 
-            $results = $profiles->paginate(20);
+            // Ahora envolvemos y ordenamos por el alias sin errores en PG
+            $results = DB::query()
+                ->fromSub($withDistance, 'q')
+                ->orderByRaw('distance NULLS LAST') // nulls (remoto) al final
+                ->paginate(20);
         } else {
             // SQLITE: calcular distancia en PHP
             $presentials = (clone $base)
@@ -137,12 +136,10 @@ class SearchController extends Controller
 
     public function show(string $slug, \Illuminate\Http\Request $request)
     {
-        // Traemos el perfil por slug
         $profile = Profile::with(['service'])
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // Si NO está aprobado, solo lo pueden ver el dueño o un admin en modo preview
         if ($profile->status !== 'approved') {
             $isOwner = auth()->check() && auth()->id() === $profile->user_id;
             $isAdmin = auth()->check() && auth()->user()->can('admin');
