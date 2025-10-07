@@ -21,25 +21,23 @@ class AuthServiceProvider extends ServiceProvider
     {
         // --- GATES ---
 
-        // Admin: rol admin y no suspendido
+        // Admin: rol admin y cuenta activa
         Gate::define('admin', function (User $user) {
-            $status = $user->account_status ?? 'active';
-            return $user->role === 'admin' && $status !== 'suspended';
+            return ($user->role === 'admin') && (($user->account_status ?? 'inactive') === 'active');
         });
 
         // Provider activo
         Gate::define('provider-active', function (User $user) {
-            $status = $user->account_status ?? 'active';
-            return $user->role === 'provider' && $status === 'active';
+            $status = $user->account_status ?? 'inactive';
+            return ($user->role === 'provider') && ($status === 'active');
         });
 
         // Cuenta activa (genérico)
         Gate::define('account-active', function (User $user) {
-            $status = $user->account_status ?? 'active';
-            return $status === 'active';
+            return (($user->account_status ?? 'inactive') === 'active');
         });
 
         // (Opcional) Super-atajo: cualquier admin pasa cualquier Gate
-        // Gate::before(fn(User $u, string $ability) => $u->role === 'admin' ? true : null);
+        // Gate::before(fn (User $u, string $ability) => $u->role === 'admin' ? true : null);
     }
 }
