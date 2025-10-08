@@ -22,6 +22,7 @@
 
                 <div class="card-body">
                     @php
+                        // 1) Si NO viene $users desde el controlador, lo obtenemos acá con account_status incluido
                         if (!isset($users)) {
                             $users = \App\Models\User::query()
                                 ->whereIn('account_status', ['active', 'suspended'])
@@ -29,6 +30,12 @@
                                 ->orderByDesc('id')
                                 ->get();
                         }
+
+                        // 2) Traer SIEMPRE el estado real desde DB para los IDs listados,
+                        //    por si el controlador no incluyó el campo o hay accessor por defecto.
+                        $statusMap = \App\Models\User::query()
+                            ->whereIn('id', $users->pluck('id'))
+                            ->pluck('account_status','id'); // [id => 'active'|'suspended'|...]
                     @endphp
 
                     <div class="table-responsive">
@@ -47,22 +54,28 @@
                             <tbody>
                                 @foreach($users as $u)
                                     @php
-                                        $status = $u->account_status ?? 'active';
+                                        // Estado REAL (DB) con fallback a lo que venga en el modelo
+                                        $status = strtolower((string)($statusMap[$u->id] ?? $u->account_status ?? ''));
+                                        if ($status === '') { $status = 'unknown'; }
+
                                         $isSuspended = $status === 'suspended';
 
                                         $roleBadge = match($u->role) {
                                             'admin'    => 'badge bg-dark text-white',
                                             'provider' => 'badge bg-info text-dark',
-                                            default    => 'badge bg-secondary text-white'
+                                            default    => 'badge bg-secondary text-white',
+                                        };
+
+                                        $statusBadge = match($status) {
+                                            'active'    => 'badge bg-success',
+                                            'suspended' => 'badge bg-warning text-dark',
+                                            'pending'   => 'badge bg-secondary',
+                                            'rejected'  => 'badge bg-danger',
+                                            default     => 'badge bg-light text-dark',
                                         };
 
                                         // slug del perfil (si existe)
                                         $slug = \App\Models\Profile::where('user_id', $u->id)->value('slug');
-
-                                        // badge de estado
-                                        $statusBadge = $status === 'active'
-                                            ? 'badge bg-success'
-                                            : ($status === 'suspended' ? 'badge bg-warning text-dark' : 'badge bg-secondary');
                                     @endphp
                                     <tr>
                                         <td>{{ $u->id }}</td>
