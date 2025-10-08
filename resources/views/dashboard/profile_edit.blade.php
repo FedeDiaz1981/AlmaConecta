@@ -85,38 +85,59 @@
                     </select>
                 </div>
 
-                {{-- País/Provincia/Ciudad --}}
-                <div class="grid md:grid-cols-3 gap-4">
+                {{-- UBICACIÓN: un único campo con autocompletado + mapeo a country/state/city/address + lat/lng --}}
+                <style>
+                    .ac-wrap{position:relative}
+                    .ac-list{position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;box-shadow:0 8px 16px rgba(0,0,0,.08);max-height:16rem;overflow:auto}
+                    .ac-item{padding:.5rem .75rem;cursor:pointer}
+                    .ac-item:hover{background:#f9fafb}
+                </style>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Ubicación</label>
+                    <div class="ac-wrap">
+                        <div class="flex gap-2">
+                            <input id="loc_input" class="border p-2 rounded w-full" autocomplete="off"
+                                   placeholder="Ciudad, provincia o dirección…" {{ $locked ? 'disabled' : '' }}>
+                            <button type="button" id="btn_myloc"
+                                    class="border rounded px-3 text-sm"
+                                    {{ $locked ? 'disabled' : '' }}>Mi ubicación</button>
+                        </div>
+                        <div id="loc_list" class="ac-list hidden"></div>
+                    </div>
+                    <div class="text-xs text-gray-500" id="coords_hint" style="display:none"></div>
+
+                    {{-- Hidden: coordenadas que se guardarán en profiles --}}
+                    <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
+                    <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
+                </div>
+
+                {{-- Campos que seguimos enviando (rellenos por el autocompletado) --}}
+                <div class="grid md:grid-cols-3 gap-4 mt-3">
                     <div>
                         <label class="block text-sm font-medium mb-1">País (ISO-2)</label>
-                        <input name="country" class="border p-2 rounded w-full"
-                               value="{{ old('country',$profile->country) }}" {{ $locked ? 'disabled' : '' }}>
+                        <input name="country" id="country" class="border p-2 rounded w-full"
+                               value="{{ old('country',$profile->country) }}" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Provincia/Estado</label>
-                        <input name="state" class="border p-2 rounded w-full" list="stateList"
-                               value="{{ old('state',$profile->state) }}" {{ $locked ? 'disabled' : '' }}>
-                        <datalist id="stateList"></datalist>
+                        <input name="state" id="state" class="border p-2 rounded w-full"
+                               value="{{ old('state',$profile->state) }}" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Ciudad</label>
-                        <input name="city" class="border p-2 rounded w-full" list="cityList"
-                               value="{{ old('city',$profile->city) }}" {{ $locked ? 'disabled' : '' }}>
-                        <datalist id="cityList"></datalist>
+                        <input name="city" id="city" class="border p-2 rounded w-full"
+                               value="{{ old('city',$profile->city) }}" readonly>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Dirección</label>
-                    <input name="address" class="border p-2 rounded w-full"
-                           value="{{ old('address',$profile->address) }}" {{ $locked ? 'disabled' : '' }}>
-                    {{-- Coordenadas (se completan solas) --}}
-                    <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
-                    <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
+                    <input name="address" id="address" class="border p-2 rounded w-full"
+                           value="{{ old('address',$profile->address) }}" readonly>
                     <p class="text-xs text-gray-500 mt-1">
-                        Coordenadas: <span id="latlngText">
-                            {{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}
-                        </span>
+                        Coordenadas:
+                        <span id="latlngText">{{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}</span>
                     </p>
                 </div>
 
@@ -187,110 +208,107 @@
         </div>
     </div>
 
-    {{-- Geocoding + Autocompletado (Nominatim / OSM) --}}
+    {{-- Autocompletado (Nominatim / OpenStreetMap) --}}
     <script>
     (function(){
-        const locked = @json($locked);
-        if (locked) return;
+      const locked = @json($locked);
+      if (locked) return;
 
-        const countryEl = document.querySelector('[name="country"]');
-        const stateEl   = document.querySelector('[name="state"]');
-        const cityEl    = document.querySelector('[name="city"]');
-        const addrEl    = document.querySelector('[name="address"]');
-        const latEl     = document.getElementById('lat');
-        const lngEl     = document.getElementById('lng');
-        const latlngTxt = document.getElementById('latlngText');
-        const stateList = document.getElementById('stateList');
-        const cityList  = document.getElementById('cityList');
+      const $ = s => document.querySelector(s);
+      const locInput = $('#loc_input');
+      const list = $('#loc_list');
+      const myBtn = $('#btn_myloc');
+      const latEl = $('#lat'), lngEl = $('#lng');
+      const countryEl = $('#country'), stateEl = $('#state'), cityEl = $('#city'), addrEl = $('#address');
+      const hint = $('#coords_hint');
+      const latlngTxt = $('#latlngText');
 
-        const debounce = (fn, ms=800) => {
-            let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); };
-        };
+      // Debounce
+      let t=null; const debounce=(fn,ms=250)=>{ clearTimeout(t); t=setTimeout(fn,ms); };
 
-        async function nominatimSearch(q){
-            if(!q || q.trim().length < 2) return [];
-            const url = new URL('https://nominatim.openstreetmap.org/search');
-            url.search = new URLSearchParams({
-                format: 'json',
-                addressdetails: 1,
-                limit: 5,
-                q: q,
-                // opcional: identificá tu app (mejor práctica)
-                email: 'admin@tu-dominio.com'
-            });
-            try {
-                const r = await fetch(url, {headers:{'Accept':'application/json'}});
-                if(!r.ok) return [];
-                return await r.json();
-            } catch { return []; }
+      function setLatLng(lat,lng){
+        if(typeof lat==='undefined' || typeof lng==='undefined') return;
+        latEl.value = Number(lat).toFixed(7);
+        lngEl.value = Number(lng).toFixed(7);
+        latlngTxt.textContent = `${latEl.value}, ${lngEl.value}`;
+        hint.style.display = 'block';
+        hint.textContent = `Coordenadas: ${latEl.value}, ${lngEl.value}`;
+      }
+
+      function render(items){
+        if(!items || !items.length){ list.classList.add('hidden'); list.innerHTML=''; return; }
+        list.innerHTML = items.map(it =>
+          `<div class="ac-item" data-item='${JSON.stringify(it).replaceAll("'", "&#39;")}'>
+             ${it.display_name}
+           </div>`).join('');
+        list.classList.remove('hidden');
+      }
+
+      async function search(q){
+        if(!q || q.length<3){ render([]); return; }
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=es&q=${encodeURIComponent(q)}`;
+        try{
+          const r = await fetch(url, {headers:{'Accept':'application/json'}});
+          const data = await r.json();
+          render(data);
+        }catch{ render([]); }
+      }
+
+      function choose(item){
+        // Lat/Lng
+        setLatLng(item.lat, item.lon);
+
+        // Address parts
+        const a = item.address || {};
+        const city = a.city || a.town || a.village || a.hamlet || '';
+        const state = a.state || '';
+        const country = (a.country_code || '').toUpperCase();
+        const road = a.road || a.pedestrian || a.path || '';
+        const hn = a.house_number ? ` ${a.house_number}` : '';
+        const fullAddr = (item.type === 'house' || road) ? `${road}${hn}` : (item.display_name || '');
+
+        countryEl.value = country;
+        stateEl.value   = state;
+        cityEl.value    = city;
+        addrEl.value    = fullAddr;
+
+        // Mostrar legible
+        const label = [city, state].filter(Boolean).join(', ') || fullAddr || item.display_name;
+        locInput.value = label;
+
+        list.classList.add('hidden'); list.innerHTML='';
+      }
+
+      // Listeners
+      locInput.addEventListener('input', () => debounce(() => search(locInput.value.trim()), 300));
+      document.addEventListener('click', (e) => {
+        if(e.target.closest('#loc_list .ac-item')){
+          const raw = e.target.closest('.ac-item').dataset.item;
+          choose(JSON.parse(raw));
+        } else if(!e.target.closest('#loc_list') && e.target !== locInput){
+          list.classList.add('hidden');
         }
+      });
 
-        function setLatLng(lat,lng){
-            if(lat==null || lng==null) return;
-            latEl.value = Number(lat).toFixed(7);
-            lngEl.value = Number(lng).toFixed(7);
-            if (latlngTxt) latlngTxt.textContent = `${latEl.value}, ${lngEl.value}`;
-        }
+      // Mi ubicación (reverse geocoding)
+      myBtn.addEventListener('click', () => {
+        if(!navigator.geolocation){ alert('Tu navegador no permite geolocalización.'); return; }
+        navigator.geolocation.getCurrentPosition(async pos=>{
+          const {latitude, longitude} = pos.coords;
+          setLatLng(latitude, longitude);
+          try{
+            const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=es`;
+            const r=await fetch(url); const j=await r.json();
+            choose({lat:latitude, lon:longitude, address:j.address||{}, display_name:j.display_name||'', type:j.type||''});
+          }catch(e){}
+        }, ()=>alert('No pudimos obtener tu ubicación.'));
+      });
 
-        // ---- Autocompletar PROVINCIA ----
-        const suggestStates = debounce(async ()=>{
-            stateList.innerHTML = '';
-            const q = `${stateEl.value || ''} ${countryEl.value || ''}`.trim();
-            if(!q) return;
-            const res = await nominatimSearch(q);
-            const seen = new Set();
-            res.forEach(item=>{
-                const st = item.address?.state;
-                if(st && !seen.has(st)){
-                    seen.add(st);
-                    const opt = document.createElement('option');
-                    opt.value = st;
-                    stateList.appendChild(opt);
-                }
-            });
-        });
-
-        // ---- Autocompletar CIUDAD ----
-        const suggestCities = debounce(async ()=>{
-            cityList.innerHTML = '';
-            const q = `${cityEl.value || ''} ${stateEl.value || ''} ${countryEl.value || ''}`.trim();
-            if(!q) return;
-            const res = await nominatimSearch(q);
-            const seen = new Set();
-            res.forEach(item=>{
-                const a = item.address || {};
-                const city = a.city || a.town || a.village || a.hamlet;
-                if(city && !seen.has(city)){
-                    seen.add(city);
-                    const opt = document.createElement('option');
-                    opt.value = city;
-                    cityList.appendChild(opt);
-                }
-            });
-        });
-
-        // ---- Geocodificar dirección completa -> lat/lng ----
-        const geocodeFull = debounce(async ()=>{
-            const q = [addrEl.value, cityEl.value, stateEl.value, countryEl.value].filter(Boolean).join(', ');
-            if(!q) return;
-            const res = await nominatimSearch(q);
-            if(res.length){
-                setLatLng(res[0].lat, res[0].lon);
-            }
-        });
-
-        // Eventos
-        stateEl.addEventListener('input', suggestStates);
-        cityEl.addEventListener('input', suggestCities);
-
-        [countryEl, stateEl, cityEl, addrEl].forEach(el=>{
-            el.addEventListener('change', geocodeFull);
-            el.addEventListener('blur', geocodeFull);
-            el.addEventListener('input', debounce(()=>{}, 200)); // solo para activar debounce base
-        });
-
-        // Geocodificar al cargar si ya hay datos
-        geocodeFull();
+      // Si ya hay datos previos, mostrarlos
+      if(latEl.value && lngEl.value){
+        hint.style.display='block';
+        hint.textContent=`Coordenadas: ${latEl.value}, ${lngEl.value}`;
+      }
     })();
     </script>
 </x-app-layout>

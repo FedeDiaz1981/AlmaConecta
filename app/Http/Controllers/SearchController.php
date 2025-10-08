@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Profile;
 
 class SearchController extends Controller
@@ -15,33 +15,85 @@ class SearchController extends Controller
         return view('home');
     }
 
+    /**
+     * Geocodifica un lugar con Nominatim (OSM) y devuelve centro y bounding box.
+     * Cachea 12 horas para no pegarle siempre al servicio.
+     */
+    protected function geocode(string $place): ?array
+    {
+        $cacheKey = 'geocode:' . md5($place);
+
+        return Cache::remember($cacheKey, now()->addHours(12), function () use ($place) {
+            $resp = Http::withHeaders([
+                    // Nominatim pide un User-Agent identificable
+                    'User-Agent' => 'alma/1.0 (+https://example.com)']
+                )
+                ->timeout(10)
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $place,
+                    'format' => 'json',
+                    'limit' => 1,
+                    'addressdetails' => 1,
+                    'polygon_geojson' => 0,
+                ]);
+
+            if (!$resp->ok() || empty($resp[0])) {
+                return null;
+            }
+
+            // OJO: Nominatim devuelve boundingbox = [south, north, west, east]
+            $r = $resp[0];
+
+            return [
+                'lat'  => (float) $r['lat'],
+                'lng'  => (float) $r['lon'],
+                'bbox' => [
+                    'south' => (float) $r['boundingbox'][0],
+                    'north' => (float) $r['boundingbox'][1],
+                    'west'  => (float) $r['boundingbox'][2],
+                    'east'  => (float) $r['boundingbox'][3],
+                ],
+            ];
+        });
+    }
+
     public function search(Request $request)
     {
         $q       = trim((string) $request->input('q', ''));
         $locText = trim((string) $request->input('loc', ''));
         $lat     = $request->filled('lat') ? (float) $request->input('lat') : null;
         $lng     = $request->filled('lng') ? (float) $request->input('lng') : null;
-        $radius  = max(1, (int) $request->input('r', 25));
+        $radius  = max(1, min(4000, (int) $request->input('r', 25))); // 1..4000 km
         $remote  = (bool) $request->boolean('remote', true);
 
-        // Base
+        // Si vino texto de ubicación pero no coordenadas, geocodificamos
+        $bbox = null;
+        if (($lat === null || $lng === null) && $locText !== '') {
+            if ($g = $this->geocode($locText)) {
+                $lat  = $g['lat'];
+                $lng  = $g['lng'];
+                $bbox = $g['bbox'];
+            }
+        }
+
+        // Base de búsqueda
         $base = Profile::query()
             ->with('service')
-            // admití "approved" y también "active" por compatibilidad
             ->whereIn('status', ['approved', 'active'])
             ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($w) use ($q) {
-                    $w->where('display_name', 'like', "%{$q}%")
-                      ->orWhereHas('service', fn ($s) => $s->where('name', 'like', "%{$q}%"));
+                $like = '%' . $q . '%';
+                $query->where(function ($w) use ($like) {
+                    $w->where('display_name', 'like', $like)
+                      ->orWhereHas('service', fn ($s) => $s->where('name', 'like', $like));
                 });
             });
 
-        // SIN centro -> filtro simple por modalidad
+        // Si aún no tenemos centro => filtro simple por modalidad
         if ($lat === null || $lng === null) {
             $results = $base->when(
                 $remote,
-                fn ($q) => $q->where('mode_remote', true),
-                fn ($q) => $q->where('mode_presential', true)
+                fn ($qq) => $qq->where('mode_remote', true),
+                fn ($qq) => $qq->where('mode_presential', true)
             )->latest('id')->paginate(20);
 
             return view('search.results', [
@@ -55,71 +107,54 @@ class SearchController extends Controller
             ]);
         }
 
-        // CON centro
-        if (DB::getDriverName() !== 'sqlite') {
-            // --- PostgreSQL/MySQL: usar trigonometría en SQL ---
-            // OJO: sin paréntesis de más
-            $distanceExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ))";
-
-            $profiles = (clone $base)
-                ->select('profiles.*')
-                ->selectRaw("$distanceExpr as distance", [$lat, $lng, $lat])
-                ->where(function ($w) use ($distanceExpr, $lat, $lng, $radius, $remote) {
-                    $w->where(function ($z) use ($distanceExpr, $lat, $lng, $radius) {
-                        $z->where('mode_presential', true)
-                          ->whereNotNull('lat')->whereNotNull('lng')
-                          ->whereRaw("$distanceExpr <= ?", [$lat, $lng, $lat, $radius]);
-                    });
-                    if ($remote) {
-                        $w->orWhere('mode_remote', true);
-                    }
-                })
-                ->orderByRaw('CASE WHEN distance IS NULL THEN 1 ELSE 0 END, distance ASC');
-
-            $results = $profiles->paginate(20);
+        // Construimos/expandimos bounding box en ±radius km
+        if (!$bbox) {
+            // bbox alrededor del centro
+            $dLat = $radius / 111.32;
+            $dLng = $radius / max(0.00001, (111.32 * cos(deg2rad($lat))));
+            $bbox = [
+                'south' => $lat - $dLat,
+                'north' => $lat + $dLat,
+                'west'  => $lng - $dLng,
+                'east'  => $lng + $dLng,
+            ];
         } else {
-            // --- SQLITE: calcular distancia en PHP ---
-            $presentials = (clone $base)
-                ->where('mode_presential', true)
-                ->whereNotNull('lat')->whereNotNull('lng')
-                ->get();
+            // expandir bbox del geocoder
+            $midLat = ($bbox['south'] + $bbox['north']) / 2.0;
+            $dLat   = $radius / 111.32;
+            $dLng   = $radius / max(0.00001, (111.32 * cos(deg2rad($midLat))));
+            $bbox = [
+                'south' => $bbox['south'] - $dLat,
+                'north' => $bbox['north'] + $dLat,
+                'west'  => $bbox['west']  - $dLng,
+                'east'  => $bbox['east']  + $dLng,
+            ];
+        }
 
-            $haversine = function ($lat1, $lon1, $lat2, $lon2) {
-                $R = 6371;
-                $dLat = deg2rad($lat2 - $lat1);
-                $dLon = deg2rad($lon2 - $lon1);
-                $a = sin($dLat / 2) ** 2
-                   + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-                $c = 2 * asin(min(1, sqrt($a)));
-                return $R * $c;
-            };
+        // Expresión de distancia (Haversine con coseno esférico)
+        $distExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ))";
 
-            $presentials->transform(function ($p) use ($lat, $lng, $haversine) {
-                $p->distance = $haversine($lat, $lng, (float) $p->lat, (float) $p->lng);
-                return $p;
+        // Pre-filtramos por bbox y calculamos distancia; incluimos remotos si corresponde
+        $inner = (clone $base)
+            ->select('profiles.*')
+            ->selectRaw("$distExpr as distance", [$lat, $lng, $lat])
+            ->where(function ($w) use ($bbox, $remote) {
+                $w->where(function ($z) use ($bbox) {
+                    $z->where('mode_presential', true)
+                      ->whereNotNull('lat')->whereNotNull('lng')
+                      ->whereBetween('lat', [$bbox['south'], $bbox['north']])
+                      ->whereBetween('lng', [$bbox['west'],  $bbox['east']]);
+                });
+                if ($remote) {
+                    $w->orWhere('mode_remote', true); // los remotos entran siempre
+                }
             });
 
-            $presentials = $presentials->filter(fn ($p) => $p->distance <= $radius);
-
-            $remotes = $remote
-                ? (clone $base)->where('mode_remote', true)->get()->each(function ($p) {
-                    $p->distance = null;
-                })
-                : collect();
-
-            $collection = $presentials->concat($remotes)->unique('id')
-                ->sortBy(fn ($p) => $p->distance === null ? PHP_INT_MAX : $p->distance)
-                ->values();
-
-            // Paginar manualmente
-            $page    = Paginator::resolveCurrentPage('page');
-            $perPage = 20;
-            $total   = $collection->count();
-            $items   = $collection->forPage($page, $perPage)->values();
-            $results = new LengthAwarePaginator($items, $total, $perPage, $page, [
-                'path' => Paginator::resolveCurrentPath(),
-            ]);
-        }
+        // Ordenamos en una consulta exterior para que paginate() no rompa con el alias "distance"
+        $results = DB::query()
+            ->fromSub($inner, 'p')
+            ->orderByRaw('CASE WHEN p.distance IS NULL THEN 1 ELSE 0 END, p.distance ASC')
+            ->paginate(20);
 
         return view('search.results', [
             'results' => $results,
@@ -132,7 +167,7 @@ class SearchController extends Controller
         ]);
     }
 
-    public function show(string $slug, \Illuminate\Http\Request $request)
+    public function show(string $slug, Request $request)
     {
         $profile = Profile::with(['service'])
             ->where('slug', $slug)
