@@ -16,7 +16,7 @@
                 <div class="alert alert-success mb-4">{{ session('status') }}</div>
             @endif
 
-            {{-- CUENTAS PENDIENTES --}}
+            {{-- CUENTAS (pendientes listadas aquí) --}}
             <div class="card shadow-sm">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2">
@@ -42,76 +42,83 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($pending as $u)
-                                        @php
-    // Traemos el perfil por user_id (sin depender de $u->profile)
-    $profile = \App\Models\Profile::where('user_id', $u->id)->first();
+                                @foreach($pending as $u)
+                                    @php
+                                        // Estado real desde la base
+                                        $status = strtolower((string)($u->account_status ?? $u->status ?? ''));
+                                        // Clase de badge según estado
+                                        $statusClass = match ($status) {
+                                            'active'    => 'text-bg-success',
+                                            'suspended' => 'text-bg-secondary',
+                                            'pending'   => 'text-bg-warning',
+                                            'rejected'  => 'text-bg-danger',
+                                            default     => 'text-bg-light',
+                                        };
 
-    // Buscar la edición pendiente (lo que el provider envió para aprobar)
-    $pendingEdit = $profile
-        ? \App\Models\Edit::where('profile_id', $profile->id)
-            ->where('status', 'pending')
-            ->latest()
-            ->first()
-        : null;
+                                        // Traer/normalizar datos de perfil y edición pendiente
+                                        $profile = \App\Models\Profile::where('user_id', $u->id)->first();
+                                        $pendingEdit = $profile
+                                            ? \App\Models\Edit::where('profile_id', $profile->id)
+                                                ->where('status', 'pending')
+                                                ->latest()
+                                                ->first()
+                                            : null;
 
-    // Normalizar payload (array)
-    $payload = $pendingEdit?->payload;
-    if (!is_array($payload)) {
-        $payload = json_decode($payload ?? '[]', true) ?: [];
-    }
+                                        $payload = $pendingEdit?->payload;
+                                        if (!is_array($payload)) {
+                                            $payload = json_decode($payload ?? '[]', true) ?: [];
+                                        }
 
-    // Helper: valor propuesto (payload) o aprobado (perfil)
-    $val = function(string $key) use ($payload, $profile) {
-        return array_key_exists($key, $payload) ? $payload[$key] : ($profile->$key ?? null);
-    };
+                                        $val = function(string $key) use ($payload, $profile) {
+                                            return array_key_exists($key, $payload) ? $payload[$key] : ($profile->$key ?? null);
+                                        };
 
-    $displayName  = $val('display_name');
-    $serviceId    = $val('service_id');
+                                        $displayName  = $val('display_name');
+                                        $serviceId    = $val('service_id');
+                                        $serviceName  = $serviceId ? optional(\App\Models\Service::find($serviceId))->name : null;
 
-    // Resolver nombre de servicio
-    $serviceName = $serviceId ? optional(\App\Models\Service::find($serviceId))->name : null;
+                                        $nr = (bool) ($payload['mode_remote']     ?? $profile->mode_remote     ?? false);
+                                        $np = (bool) ($payload['mode_presential'] ?? $profile->mode_presential ?? false);
+                                        $mode = $nr && $np ? 'Remoto y presencial' : ($nr ? 'Remoto' : ($np ? 'Presencial' : null));
 
-    // Modalidad propuesta/aprobada
-    $nr = (bool) ($payload['mode_remote']     ?? $profile->mode_remote     ?? false);
-    $np = (bool) ($payload['mode_presential'] ?? $profile->mode_presential ?? false);
-    $mode = $nr && $np ? 'Remoto y presencial' : ($nr ? 'Remoto' : ($np ? 'Presencial' : null));
+                                        $country      = $val('country');
+                                        $state        = $val('state');
+                                        $city         = $val('city');
+                                        $address      = $val('address');
+                                        $whatsapp     = $val('whatsapp');
+                                        $contactEmail = $val('contact_email');
+                                        $about        = $val('about');
+                                        $photoPath    = $val('photo_path');
+                                        $videoUrl     = $val('video_url');
+                                    @endphp
 
-    $country      = $val('country');
-    $state        = $val('state');
-    $city         = $val('city');
-    $address      = $val('address');
-    $whatsapp     = $val('whatsapp');
-    $contactEmail = $val('contact_email');
-    $about        = $val('about');
-    $photoPath    = $val('photo_path');
-    $videoUrl     = $val('video_url');
-@endphp
+                                    <tr>
+                                        <td>{{ $u->id }}</td>
+                                        <td class="fw-semibold">{{ $u->name }}</td>
+                                        <td>{{ $u->email }}</td>
+                                        <td><span class="badge bg-outline border">{{ $u->role }}</span></td>
+                                        <td>
+                                            <span class="badge {{ $statusClass }}">
+                                                {{ $status !== '' ? $status : '—' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            {{-- Ver solicitud --}}
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm me-2"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#user-request-{{ $u->id }}"
+                                            >
+                                                Ver solicitud
+                                            </button>
 
-
-                                        <tr>
-                                            <td>{{ $u->id }}</td>
-                                            <td class="fw-semibold">{{ $u->name }}</td>
-                                            <td>{{ $u->email }}</td>
-                                            <td><span class="badge bg-outline border">{{ $u->role }}</span></td>
-                                            <td><span class="badge text-bg-warning">pending</span></td>
-                                            <td class="text-end">
-                                                {{-- Ver solicitud (modal con datos de la edición pendiente) --}}
-                                                <button
-                                                    class="btn btn-outline-secondary btn-sm me-2"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#user-request-{{ $u->id }}"
-                                                >
-                                                    Ver solicitud
-                                                </button>
-
-                                                {{-- Aprobar rápido --}}
+                                            {{-- Aprobar (sólo si realmente está pending) --}}
+                                            @if($status === 'pending')
                                                 <form method="POST" action="{{ route('admin.users.approve',$u) }}" class="d-inline">
                                                     @csrf
                                                     <button class="btn btn-success btn-sm">Aprobar</button>
                                                 </form>
 
-                                                {{-- Rechazar rápido --}}
                                                 <form method="POST" action="{{ route('admin.users.reject',$u) }}" class="d-inline ms-2">
                                                     @csrf
                                                     <div class="input-group input-group-sm" style="max-width: 340px;">
@@ -119,127 +126,128 @@
                                                         <button class="btn btn-danger">Rechazar</button>
                                                     </div>
                                                 </form>
-                                            </td>
-                                        </tr>
+                                            @endif
+                                        </td>
+                                    </tr>
 
-                                        {{-- MODAL: Ver solicitud (sin ribbon, con X arriba) --}}
-                                        <div class="modal fade" id="user-request-{{ $u->id }}" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg modal-dialog-centered">
-                                                <div class="modal-content border-0 shadow-lg position-relative">
-                                                    {{-- X de cierre --}}
-                                                    <button type="button" class="btn-close position-absolute end-0 top-0 m-3 z-3"
-                                                            data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                    {{-- MODAL: Ver solicitud --}}
+                                    <div class="modal fade" id="user-request-{{ $u->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow-lg position-relative">
+                                                <button type="button" class="btn-close position-absolute end-0 top-0 m-3 z-3"
+                                                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
 
-                                                    <div class="modal-body p-4">
-                                                        <div class="d-flex align-items-center justify-content-between mb-3">
-                                                            <div>
-                                                                <div class="h5 mb-1">{{ $u->name }}</div>
-                                                                <div class="text-muted small">
-                                                                    #{{ $u->id }} · {{ $u->email }} · Rol: {{ $u->role }}
-                                                                </div>
+                                                <div class="modal-body p-4">
+                                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                                        <div>
+                                                            <div class="h5 mb-1">{{ $u->name }}</div>
+                                                            <div class="text-muted small">
+                                                                #{{ $u->id }} · {{ $u->email }} · Rol: {{ $u->role }}
                                                             </div>
-                                                            <span class="badge text-bg-warning">pending</span>
                                                         </div>
+                                                        <span class="badge {{ $statusClass }}">{{ $status !== '' ? $status : '—' }}</span>
+                                                    </div>
 
-                                                        @if($pendingEdit || $profile->exists)
-                                                            <div class="row g-3">
-                                                                <div class="col-md-8">
-                                                                    <div class="mb-3">
-                                                                        <div class="text-uppercase text-muted small">Nombre público</div>
-                                                                        <div class="fw-semibold">{{ $displayName ?? '—' }}</div>
+                                                    @if($pendingEdit || ($profile && $profile->exists))
+                                                        <div class="row g-3">
+                                                            <div class="col-md-8">
+                                                                <div class="mb-3">
+                                                                    <div class="text-uppercase text-muted small">Nombre público</div>
+                                                                    <div class="fw-semibold">{{ $displayName ?? '—' }}</div>
+                                                                </div>
+
+                                                                <div class="row g-3">
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Especialidad</div>
+                                                                        <div class="fw-semibold">{{ $serviceName ?? '—' }}</div>
                                                                     </div>
-
-                                                                    <div class="row g-3">
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Especialidad</div>
-                                                                            <div class="fw-semibold">{{ $serviceName ?? '—' }}</div>
-                                                                        </div>
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Modalidad</div>
-                                                                            <div>
-                                                                                @if($mode)
-                                                                                    <span class="badge text-bg-info">{{ $mode }}</span>
-                                                                                @else
-                                                                                    <span class="text-muted">—</span>
-                                                                                @endif
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div class="row g-3 mt-1">
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">WhatsApp</div>
-                                                                            <div class="fw-semibold">{{ $whatsapp ?? '—' }}</div>
-                                                                        </div>
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Correo</div>
-                                                                            <div class="fw-semibold">{{ $contactEmail ?? '—' }}</div>
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Modalidad</div>
+                                                                        <div>
+                                                                            @if($mode)
+                                                                                <span class="badge text-bg-info">{{ $mode }}</span>
+                                                                            @else
+                                                                                <span class="text-muted">—</span>
+                                                                            @endif
                                                                         </div>
                                                                     </div>
+                                                                </div>
 
-                                                                    <div class="row g-3 mt-1">
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">País</div>
-                                                                            <div class="fw-semibold">{{ $country ?? '—' }}</div>
-                                                                        </div>
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Provincia/Estado</div>
-                                                                            <div class="fw-semibold">{{ $state ?? '—' }}</div>
+                                                                <div class="row g-3 mt-1">
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">WhatsApp</div>
+                                                                        <div class="fw-semibold">{{ $whatsapp ?? '—' }}</div>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Correo</div>
+                                                                        <div class="fw-semibold">{{ $contactEmail ?? '—' }}</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="row g-3 mt-1">
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">País</div>
+                                                                        <div class="fw-semibold">{{ $country ?? '—' }}</div>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Provincia/Estado</div>
+                                                                        <div class="fw-semibold">{{ $state ?? '—' }}</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="row g-3 mt-1">
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Ciudad</div>
+                                                                        <div class="fw-semibold">{{ $city ?? '—' }}</div>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <div class="text-uppercase text-muted small">Dirección</div>
+                                                                        <div class="fw-semibold">{{ $address ?? '—' }}</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                @if($about)
+                                                                    <div class="mt-3">
+                                                                        <div class="text-uppercase text-muted small mb-1">Detalle (propuesto)</div>
+                                                                        <div class="small border rounded p-2" style="max-height:12rem;overflow:auto;">
+                                                                            {!! nl2br(e($about)) !!}
                                                                         </div>
                                                                     </div>
+                                                                @endif
+                                                            </div>
 
-                                                                    <div class="row g-3 mt-1">
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Ciudad</div>
-                                                                            <div class="fw-semibold">{{ $city ?? '—' }}</div>
-                                                                        </div>
-                                                                        <div class="col-sm-6">
-                                                                            <div class="text-uppercase text-muted small">Dirección</div>
-                                                                            <div class="fw-semibold">{{ $address ?? '—' }}</div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    @if($about)
-                                                                        <div class="mt-3">
-                                                                            <div class="text-uppercase text-muted small mb-1">Detalle (propuesto)</div>
-                                                                            <div class="small border rounded p-2" style="max-height:12rem;overflow:auto;">
-                                                                                {!! nl2br(e($about)) !!}
-                                                                            </div>
-                                                                        </div>
+                                                            <div class="col-md-4">
+                                                                <div class="mb-3">
+                                                                    <div class="text-uppercase text-muted small">Foto (propuesta)</div>
+                                                                    @if($photoPath)
+                                                                        <img src="{{ asset('storage/'.$photoPath) }}" class="img-fluid rounded border">
+                                                                    @else
+                                                                        <div class="text-muted">—</div>
                                                                     @endif
                                                                 </div>
 
-                                                                <div class="col-md-4">
-                                                                    <div class="mb-3">
-                                                                        <div class="text-uppercase text-muted small">Foto (propuesta)</div>
-                                                                        @if($photoPath)
-                                                                            <img src="{{ asset('storage/'.$photoPath) }}" class="img-fluid rounded border">
-                                                                        @else
-                                                                            <div class="text-muted">—</div>
-                                                                        @endif
+                                                                @if($videoUrl)
+                                                                    <div class="text-uppercase text-muted small">Video</div>
+                                                                    <div class="ratio ratio-16x9">
+                                                                        <iframe
+                                                                            src="{{ $videoUrl }}"
+                                                                            title="Video del proveedor"
+                                                                            allowfullscreen
+                                                                            class="rounded border">
+                                                                        </iframe>
                                                                     </div>
-
-                                                                    @if($videoUrl)
-                                                                        <div class="text-uppercase text-muted small">Video</div>
-                                                                        <div class="ratio ratio-16x9">
-                                                                            <iframe
-                                                                                src="{{ $videoUrl }}"
-                                                                                title="Video del proveedor"
-                                                                                allowfullscreen
-                                                                                class="rounded border">
-                                                                            </iframe>
-                                                                        </div>
-                                                                    @endif
-                                                                </div>
+                                                                @endif
                                                             </div>
-                                                        @else
-                                                            <div class="alert alert-warning">
-                                                                El usuario todavía no cargó datos de perfil.
-                                                            </div>
-                                                        @endif
+                                                        </div>
+                                                    @else
+                                                        <div class="alert alert-warning">
+                                                            El usuario todavía no cargó datos de perfil.
+                                                        </div>
+                                                    @endif
 
-                                                        {{-- Acciones dentro del modal --}}
-                                                        <div class="d-flex flex-wrap gap-2 mt-4">
+                                                    {{-- Acciones dentro del modal --}}
+                                                    <div class="d-flex flex-wrap gap-2 mt-4">
+                                                        @if($status === 'pending')
                                                             <form method="POST" action="{{ route('admin.users.approve',$u) }}">
                                                                 @csrf
                                                                 <button class="btn btn-success">Aprobar</button>
@@ -250,13 +258,16 @@
                                                                 <input name="reason" class="form-control form-control-sm" style="min-width:260px" placeholder="Motivo (opcional)">
                                                                 <button class="btn btn-danger">Rechazar</button>
                                                             </form>
-                                                        </div>
+                                                        @else
+                                                            <span class="text-muted small">Acciones disponibles sólo para cuentas en estado <b>pending</b>.</span>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        {{-- /MODAL --}}
-                                    @endforeach
+                                    </div>
+                                    {{-- /MODAL --}}
+                                @endforeach
                                 </tbody>
                             </table>
                         </div>
