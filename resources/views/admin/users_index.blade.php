@@ -37,17 +37,17 @@
                                         <th scope="col">Nombre</th>
                                         <th scope="col">Email</th>
                                         <th scope="col">Rol</th>
-                                        <th scope="col">Estado</th>
+                                        <th scope="col">Estado cuenta</th>
+                                        <th scope="col">Estado perfil</th>
                                         <th scope="col" class="text-end">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 @foreach($pending as $u)
                                     @php
-                                        // Estado real desde la base
-                                        $status = strtolower((string)($u->account_status ?? $u->status ?? ''));
-                                        // Clase de badge según estado
-                                        $statusClass = match ($status) {
+                                        // Estado de la CUENTA
+                                        $accountStatus = strtolower((string)($u->account_status ?? $u->status ?? ''));
+                                        $accountClass = match ($accountStatus) {
                                             'active'    => 'text-bg-success',
                                             'suspended' => 'text-bg-secondary',
                                             'pending'   => 'text-bg-warning',
@@ -55,8 +55,19 @@
                                             default     => 'text-bg-light',
                                         };
 
-                                        // Traer/normalizar datos de perfil y edición pendiente
+                                        // Perfil y edición pendiente
                                         $profile = \App\Models\Profile::where('user_id', $u->id)->first();
+
+                                        // Estado del PERFIL
+                                        $profileStatus = strtolower((string)($profile->status ?? ''));
+                                        $profileClass = match ($profileStatus) {
+                                            'approved'  => 'text-bg-success',
+                                            'pending'   => 'text-bg-warning',
+                                            'rejected'  => 'text-bg-danger',
+                                            default     => 'text-bg-light',
+                                        };
+
+                                        // Última edición pendiente (si existe)
                                         $pendingEdit = $profile
                                             ? \App\Models\Edit::where('profile_id', $profile->id)
                                                 ->where('status', 'pending')
@@ -64,11 +75,13 @@
                                                 ->first()
                                             : null;
 
+                                        // Normalizar payload
                                         $payload = $pendingEdit?->payload;
                                         if (!is_array($payload)) {
                                             $payload = json_decode($payload ?? '[]', true) ?: [];
                                         }
 
+                                        // Helper para tomar del payload o del perfil
                                         $val = function(string $key) use ($payload, $profile) {
                                             return array_key_exists($key, $payload) ? $payload[$key] : ($profile->$key ?? null);
                                         };
@@ -77,8 +90,8 @@
                                         $serviceId    = $val('service_id');
                                         $serviceName  = $serviceId ? optional(\App\Models\Service::find($serviceId))->name : null;
 
-                                        $nr = (bool) ($payload['mode_remote']     ?? $profile->mode_remote     ?? false);
-                                        $np = (bool) ($payload['mode_presential'] ?? $profile->mode_presential ?? false);
+                                        $nr = (bool)($payload['mode_remote']     ?? $profile->mode_remote     ?? false);
+                                        $np = (bool)($payload['mode_presential'] ?? $profile->mode_presential ?? false);
                                         $mode = $nr && $np ? 'Remoto y presencial' : ($nr ? 'Remoto' : ($np ? 'Presencial' : null));
 
                                         $country      = $val('country');
@@ -98,8 +111,13 @@
                                         <td>{{ $u->email }}</td>
                                         <td><span class="badge bg-outline border">{{ $u->role }}</span></td>
                                         <td>
-                                            <span class="badge {{ $statusClass }}">
-                                                {{ $status !== '' ? $status : '—' }}
+                                            <span class="badge {{ $accountClass }}">
+                                                {{ $accountStatus !== '' ? $accountStatus : '—' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ $profileClass }}">
+                                                {{ $profileStatus !== '' ? $profileStatus : '—' }}
                                             </span>
                                         </td>
                                         <td class="text-end">
@@ -112,8 +130,8 @@
                                                 Ver solicitud
                                             </button>
 
-                                            {{-- Aprobar (sólo si realmente está pending) --}}
-                                            @if($status === 'pending')
+                                            {{-- Aprobar (sólo si la CUENTA está pending) --}}
+                                            @if($accountStatus === 'pending')
                                                 <form method="POST" action="{{ route('admin.users.approve',$u) }}" class="d-inline">
                                                     @csrf
                                                     <button class="btn btn-success btn-sm">Aprobar</button>
@@ -145,7 +163,10 @@
                                                                 #{{ $u->id }} · {{ $u->email }} · Rol: {{ $u->role }}
                                                             </div>
                                                         </div>
-                                                        <span class="badge {{ $statusClass }}">{{ $status !== '' ? $status : '—' }}</span>
+                                                        <div class="d-flex gap-2">
+                                                            <span class="badge {{ $accountClass }}">cuenta: {{ $accountStatus !== '' ? $accountStatus : '—' }}</span>
+                                                            <span class="badge {{ $profileClass }}">perfil: {{ $profileStatus !== '' ? $profileStatus : '—' }}</span>
+                                                        </div>
                                                     </div>
 
                                                     @if($pendingEdit || ($profile && $profile->exists))
@@ -247,7 +268,7 @@
 
                                                     {{-- Acciones dentro del modal --}}
                                                     <div class="d-flex flex-wrap gap-2 mt-4">
-                                                        @if($status === 'pending')
+                                                        @if($accountStatus === 'pending')
                                                             <form method="POST" action="{{ route('admin.users.approve',$u) }}">
                                                                 @csrf
                                                                 <button class="btn btn-success">Aprobar</button>
@@ -259,7 +280,9 @@
                                                                 <button class="btn btn-danger">Rechazar</button>
                                                             </form>
                                                         @else
-                                                            <span class="text-muted small">Acciones disponibles sólo para cuentas en estado <b>pending</b>.</span>
+                                                            <span class="text-muted small">
+                                                                Acciones disponibles sólo para cuentas en estado <b>pending</b>.
+                                                            </span>
                                                         @endif
                                                     </div>
                                                 </div>
