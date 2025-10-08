@@ -113,7 +113,7 @@
                 </div>
 
                 {{-- Campos que seguimos enviando (rellenos por el autocompletado) --}}
-                <div class="grid md:grid-cols-3 gap-4 mt-3">
+                <div class="hidden md:grid-cols-3 gap-4 mt-3">
                     <div>
                         <label class="block text-sm font-medium mb-1">País (ISO-2)</label>
                         <input name="country" id="country" class="border p-2 rounded w-full"
@@ -125,14 +125,14 @@
                                value="{{ old('state',$profile->state) }}" readonly>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Ciudad</label>
+                        <label class="hidden text-sm font-medium mb-1">Ciudad</label>
                         <input name="city" id="city" class="border p-2 rounded w-full"
                                value="{{ old('city',$profile->city) }}" readonly>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium mb-1">Dirección</label>
+                <div class="hidden">
+                    <label class="hidden text-sm font-medium mb-1">Dirección</label>
                     <input name="address" id="address" class="border p-2 rounded w-full"
                            value="{{ old('address',$profile->address) }}" readonly>
                     <p class="text-xs text-gray-500 mt-1">

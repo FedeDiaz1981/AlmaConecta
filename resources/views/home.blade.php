@@ -40,10 +40,23 @@
                             <label class="form-label">Especialidad o palabra clave</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" name="q" id="q" class="form-control"
-                                       placeholder="¿Qué buscás? (ej: acupuntura, yoga)"
-                                       value="{{ request('q') }}">
+                                <input
+                                    type="text"
+                                    name="q"
+                                    id="q"
+                                    class="form-control"
+                                    list="serviceList"
+                                    placeholder="¿Qué buscás? (ej: acupuntura, yoga)"
+                                    value="{{ request('q') }}"
+                                >
                             </div>
+                            {{-- Sugerencias desde la tabla services --}}
+                            <datalist id="serviceList">
+                                @foreach(($serviceNames ?? []) as $name)
+                                    <option value="{{ $name }}"></option>
+                                @endforeach
+                            </datalist>
+                            <small id="serviceHelp" class="text-muted d-block mt-1"></small>
                         </div>
 
                         {{-- Ubicación con autocomplete --}}
@@ -98,6 +111,85 @@
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    {{-- Validación/autocompletado de especialidad con la tabla services --}}
+    <script>
+    (() => {
+        // Lista de servicios (inyectada desde el controlador). Si no está, queda vacía.
+        const SERVICES = @json(($serviceNames ?? collect())->values());
+
+        const $inp  = document.getElementById('q');
+        const $help = document.getElementById('serviceHelp');
+
+        if (!$inp) return;
+
+        const norm = s => (s || '').toString().trim().toLowerCase();
+
+        // Distancia Levenshtein simple (suficiente para "acupuntura" vs "acupuntura", etc.)
+        function lev(a, b) {
+            a = norm(a); b = norm(b);
+            const rows = a.length + 1, cols = b.length + 1;
+            const m = Array.from({length: rows}, (_,i) => Array(cols).fill(0));
+            for (let i=0;i<rows;i++) m[i][0]=i;
+            for (let j=0;j<cols;j++) m[0][j]=j;
+            for (let i=1;i<rows;i++){
+                for (let j=1;j<cols;j++){
+                    const cost = a[i-1] === b[j-1] ? 0 : 1;
+                    m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + cost);
+                }
+            }
+            return m[rows-1][cols-1];
+        }
+
+        function nearestService(q) {
+            if (!SERVICES?.length) return null; // sin lista, no tocamos el valor
+            const qn = norm(q);
+            if (!qn) return null;
+
+            // 1) exacta
+            const exact = SERVICES.find(s => norm(s) === qn);
+            if (exact) return exact;
+
+            // 2) empieza con
+            const starts = SERVICES.filter(s => norm(s).startsWith(qn));
+            if (starts.length) return starts[0];
+
+            // 3) contiene
+            const contains = SERVICES.filter(s => norm(s).includes(qn));
+            if (contains.length) return contains[0];
+
+            // 4) más parecida por Levenshtein (umbral ≈ 1/3 del largo)
+            let best = null, bestScore = Infinity;
+            for (const s of SERVICES) {
+                const d = lev(qn, s);
+                if (d < bestScore) { bestScore = d; best = s; }
+            }
+            return bestScore <= Math.ceil(Math.max(qn.length, 3)/3) ? best : null;
+        }
+
+        function applyNearest() {
+            const v = $inp.value;
+            if (!v) { $help.textContent = ''; return; }
+
+            const best = nearestService(v);
+            if (best) {
+                // Autocompletamos silenciosamente
+                $inp.value = best;
+                $help.textContent = '';
+            } else {
+                // Sin coincidencia razonable: limpiamos suavemente
+                $inp.value = '';
+                $help.textContent = 'Seleccioná una especialidad de la lista.';
+            }
+        }
+
+        // Al salir del campo, autocompletar/normalizar
+        $inp.addEventListener('blur', applyNearest);
+
+        // Y también al enviar el formulario, por si el usuario no hizo blur
+        document.getElementById('searchForm')?.addEventListener('submit', applyNearest);
+    })();
+    </script>
 
     {{-- Autocomplete + geolocalización (Nominatim + Geolocation API) --}}
     <script>
