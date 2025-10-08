@@ -7,12 +7,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Profile;
+use App\Models\Service;
 
 class SearchController extends Controller
 {
     public function home()
     {
-        return view('home');
+        // Para el autocompletado en la vista (home.blade.php)
+        $serviceNames = Service::orderBy('name')->pluck('name');
+        return view('home', compact('serviceNames'));
     }
 
     /**
@@ -25,9 +28,8 @@ class SearchController extends Controller
 
         return Cache::remember($cacheKey, now()->addHours(12), function () use ($place) {
             $resp = Http::withHeaders([
-                    // Nominatim pide un User-Agent identificable
-                    'User-Agent' => 'alma/1.0 (+https://example.com)']
-                )
+                    'User-Agent' => 'alma/1.0 (+https://example.com)' // Nominatim pide UA identificable
+                ])
                 ->timeout(10)
                 ->get('https://nominatim.openstreetmap.org/search', [
                     'q' => $place,
@@ -41,7 +43,7 @@ class SearchController extends Controller
                 return null;
             }
 
-            // OJO: Nominatim devuelve boundingbox = [south, north, west, east]
+            // Nominatim: boundingbox = [south, north, west, east]
             $r = $resp[0];
 
             return [
@@ -76,16 +78,18 @@ class SearchController extends Controller
             }
         }
 
+        // Seguridad adicional para el campo q: si hay texto y NO existe como service, lo ignoramos
+        if ($q !== '' && !Service::where('name', $q)->exists()) {
+            $q = '';
+        }
+
         // Base de búsqueda
         $base = Profile::query()
             ->with('service')
             ->whereIn('status', ['approved', 'active'])
             ->when($q !== '', function ($query) use ($q) {
-                $like = '%' . $q . '%';
-                $query->where(function ($w) use ($like) {
-                    $w->where('display_name', 'like', $like)
-                      ->orWhereHas('service', fn ($s) => $s->where('name', 'like', $like));
-                });
+                // Si q es un service válido, priorizamos match exacto por service
+                $query->whereHas('service', fn ($s) => $s->where('name', $q));
             });
 
         // Si aún no tenemos centro => filtro simple por modalidad
@@ -101,7 +105,7 @@ class SearchController extends Controller
                 'q'       => $q,
                 'loc'     => $locText,
                 'lat'     => $lat,
-                'lng'     => $lng,
+                'lng'     => $lng,   // <- esta línea está perfecta aquí
                 'r'       => $radius,
                 'remote'  => $remote,
             ]);
@@ -150,7 +154,7 @@ class SearchController extends Controller
                 }
             });
 
-        // Ordenamos en una consulta exterior para que paginate() no rompa con el alias "distance"
+        // Ordenar por distancia en consulta exterior para que paginate() no rompa el alias
         $results = DB::query()
             ->fromSub($inner, 'p')
             ->orderByRaw('CASE WHEN p.distance IS NULL THEN 1 ELSE 0 END, p.distance ASC')
@@ -161,7 +165,7 @@ class SearchController extends Controller
             'q'       => $q,
             'loc'     => $locText,
             'lat'     => $lat,
-            'lng'     => $lng,
+            'lng'     => $lng,   // <- también correcto acá
             'r'       => $radius,
             'remote'  => $remote,
         ]);

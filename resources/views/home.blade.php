@@ -35,8 +35,8 @@
 
                 <div class="modal-body">
                     <div class="vstack gap-3">
-                        {{-- Qué buscás --}}
-                        <div>
+                        {{-- Qué buscás (AUTOCOMPLETE FORZADO A SERVICES) --}}
+                        <div class="position-relative">
                             <label class="form-label">Especialidad o palabra clave</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -45,18 +45,13 @@
                                     name="q"
                                     id="q"
                                     class="form-control"
-                                    list="serviceList"
+                                    autocomplete="off"
                                     placeholder="¿Qué buscás? (ej: acupuntura, yoga)"
                                     value="{{ request('q') }}"
                                 >
                             </div>
-                            {{-- Sugerencias desde la tabla services --}}
-                            <datalist id="serviceList">
-                                @foreach(($serviceNames ?? []) as $name)
-                                    <option value="{{ $name }}"></option>
-                                @endforeach
-                            </datalist>
-                            <small id="serviceHelp" class="text-muted d-block mt-1"></small>
+                            <div id="svcDropdown" class="dropdown-menu w-100 mt-1"></div>
+                            <small id="serviceHelp" class="text-danger d-none">Elegí una especialidad de la lista.</small>
                         </div>
 
                         {{-- Ubicación con autocomplete --}}
@@ -71,7 +66,6 @@
                                     <i class="bi bi-crosshair me-1"></i> Mi ubicación
                                 </button>
                             </div>
-                            {{-- Dropdown sugerencias --}}
                             <div id="locDropdown" class="dropdown-menu w-100 mt-1"></div>
                         </div>
 
@@ -112,82 +106,112 @@
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    {{-- Validación/autocompletado de especialidad con la tabla services --}}
+    {{-- Autocompletado FORZADO de services --}}
     <script>
     (() => {
-        // Lista de servicios (inyectada desde el controlador). Si no está, queda vacía.
+        // Pasá esta variable desde el controlador: $serviceNames = Service::orderBy('name')->pluck('name');
         const SERVICES = @json(($serviceNames ?? collect())->values());
 
-        const $inp  = document.getElementById('q');
-        const $help = document.getElementById('serviceHelp');
+        const $q      = document.getElementById('q');
+        const $dd     = document.getElementById('svcDropdown');
+        const $help   = document.getElementById('serviceHelp');
+        const $search = document.getElementById('searchBtn');
+        let activeIdx = -1; // item activo en el dropdown
 
-        if (!$inp) return;
+        const norm = s => (s||'').toString().trim().toLowerCase();
+        const isValid = val => SERVICES.some(s => norm(s) === norm(val));
 
-        const norm = s => (s || '').toString().trim().toLowerCase();
+        const setHelp = (show) => { $help.classList.toggle('d-none', !show); };
+        const setBtn  = () => {
+            // Regla: si el campo está vacío => permitir (búsqueda libre),
+            // si tiene texto, solo permitir si es un servicio válido.
+            const v = $q.value.trim();
+            const ok = v === '' || isValid(v);
+            $search.disabled = !ok;
+            setHelp(!ok && v !== '');
+        };
 
-        // Distancia Levenshtein simple (suficiente para "acupuntura" vs "acupuntura", etc.)
-        function lev(a, b) {
-            a = norm(a); b = norm(b);
-            const rows = a.length + 1, cols = b.length + 1;
-            const m = Array.from({length: rows}, (_,i) => Array(cols).fill(0));
-            for (let i=0;i<rows;i++) m[i][0]=i;
-            for (let j=0;j<cols;j++) m[0][j]=j;
-            for (let i=1;i<rows;i++){
-                for (let j=1;j<cols;j++){
-                    const cost = a[i-1] === b[j-1] ? 0 : 1;
-                    m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + cost);
+        const showDD = (items) => {
+            if (!items.length) { $dd.classList.remove('show'); $dd.innerHTML = ''; activeIdx = -1; return; }
+            $dd.innerHTML = items.map((t,i) => `
+                <button type="button" class="dropdown-item ${i===0?'active':''}" data-value="${t}">
+                    ${highlight(t, $q.value)}
+                </button>
+            `).join('');
+            activeIdx = 0;
+            $dd.classList.add('show');
+        };
+
+        const highlight = (text, query) => {
+            const q = norm(query);
+            if (!q) return text;
+            const idx = norm(text).indexOf(q);
+            if (idx < 0) return text;
+            return `${text.substring(0,idx)}<strong>${text.substring(idx, idx+q.length)}</strong>${text.substring(idx+q.length)}`;
+        };
+
+        const filter = (q) => {
+            const n = norm(q);
+            if (!n) return SERVICES.slice(0, 8);
+            const starts  = SERVICES.filter(s => norm(s).startsWith(n));
+            const contains = SERVICES.filter(s => !starts.includes(s) && norm(s).includes(n));
+            return [...starts, ...contains].slice(0, 8);
+        };
+
+        const pick = (val) => {
+            $q.value = val;
+            hideDD();
+            setBtn();
+        };
+
+        const hideDD = () => { $dd.classList.remove('show'); activeIdx = -1; };
+
+        // Eventos
+        $q.addEventListener('input', () => {
+            const items = filter($q.value);
+            showDD(items);
+            setBtn();
+        });
+
+        // Click en sugerencia
+        $dd.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-value]');
+            if (!btn) return;
+            pick(btn.dataset.value);
+        });
+
+        // Cerrar dropdown al click fuera
+        document.addEventListener('click', (e) => {
+            if (!$dd.contains(e.target) && e.target !== $q) hideDD();
+        });
+
+        // Navegación con teclado
+        $q.addEventListener('keydown', (e) => {
+            if (!$dd.classList.contains('show')) return;
+            const items = Array.from($dd.querySelectorAll('.dropdown-item'));
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = (activeIdx+1) % items.length; }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = (activeIdx-1+items.length) % items.length; }
+            else if (e.key === 'Enter') { e.preventDefault(); items[activeIdx]?.click(); return; }
+            else if (e.key === 'Escape') { hideDD(); return; }
+
+            items.forEach((el,i)=>el.classList.toggle('active', i===activeIdx));
+        });
+
+        // Al salir del campo: si tiene texto y NO es válido => limpiar y avisar
+        $q.addEventListener('blur', () => {
+            setTimeout(() => { // permitir click en dropdown
+                if ($q.value.trim() !== '' && !isValid($q.value)) {
+                    $q.value = '';
+                    setBtn();
                 }
-            }
-            return m[rows-1][cols-1];
-        }
+                hideDD();
+            }, 120);
+        });
 
-        function nearestService(q) {
-            if (!SERVICES?.length) return null; // sin lista, no tocamos el valor
-            const qn = norm(q);
-            if (!qn) return null;
-
-            // 1) exacta
-            const exact = SERVICES.find(s => norm(s) === qn);
-            if (exact) return exact;
-
-            // 2) empieza con
-            const starts = SERVICES.filter(s => norm(s).startsWith(qn));
-            if (starts.length) return starts[0];
-
-            // 3) contiene
-            const contains = SERVICES.filter(s => norm(s).includes(qn));
-            if (contains.length) return contains[0];
-
-            // 4) más parecida por Levenshtein (umbral ≈ 1/3 del largo)
-            let best = null, bestScore = Infinity;
-            for (const s of SERVICES) {
-                const d = lev(qn, s);
-                if (d < bestScore) { bestScore = d; best = s; }
-            }
-            return bestScore <= Math.ceil(Math.max(qn.length, 3)/3) ? best : null;
-        }
-
-        function applyNearest() {
-            const v = $inp.value;
-            if (!v) { $help.textContent = ''; return; }
-
-            const best = nearestService(v);
-            if (best) {
-                // Autocompletamos silenciosamente
-                $inp.value = best;
-                $help.textContent = '';
-            } else {
-                // Sin coincidencia razonable: limpiamos suavemente
-                $inp.value = '';
-                $help.textContent = 'Seleccioná una especialidad de la lista.';
-            }
-        }
-
-        // Al salir del campo, autocompletar/normalizar
-        $inp.addEventListener('blur', applyNearest);
-
-        // Y también al enviar el formulario, por si el usuario no hizo blur
-        document.getElementById('searchForm')?.addEventListener('submit', applyNearest);
+        // Estado inicial del botón
+        setBtn();
     })();
     </script>
 
@@ -284,7 +308,7 @@
         }
 
         form.addEventListener('submit', async (ev) => {
-            // Si ya tenemos coords, seguimos
+            // NO impedir el envío por "q": el botón ya controla validez del campo.
             if (latEl.value && lngEl.value) return;
 
             ev.preventDefault();
