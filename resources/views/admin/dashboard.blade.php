@@ -10,6 +10,8 @@
 
     <div class="py-4">
         <div class="container">
+
+            {{-- Card usuarios + acceso a especialidades --}}
             <div class="card shadow-sm">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2">
@@ -17,6 +19,13 @@
                         <span class="badge bg-secondary">
                             {{ isset($users) ? $users->count() : 0 }}
                         </span>
+                    </div>
+
+                    {{-- NUEVO: botón para ir al panel de especialidades --}}
+                    <div>
+                        <a href="{{ route('admin.specialties.index') }}" class="btn btn-sm btn-primary">
+                            Gestionar especialidades
+                        </a>
                     </div>
                 </div>
 

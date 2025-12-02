@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Specialty;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -18,6 +19,9 @@ use App\Http\Controllers\ProviderProfileController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
 use App\Http\Controllers\AdminEditController;
+
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +35,7 @@ $safe = function ($action) {
         report($e);
 
         if (config('app.debug')) {
-            return response('Internal error: '.$e->getMessage(), 500);
+            return response('Internal error: ' . $e->getMessage(), 500);
         }
         return response('Service temporarily unavailable', 503);
     }
@@ -42,13 +46,13 @@ $safe = function ($action) {
 | Diagnóstico
 |--------------------------------------------------------------------------
 */
-Route::get('/whoami', fn () => auth()->check()
-    ? auth()->user()->only(['id','email','role','account_status'])
+Route::get('/whoami', fn() => auth()->check()
+    ? auth()->user()->only(['id', 'email', 'role', 'account_status'])
     : ['guest' => true]);
 
-Route::middleware('auth')->get('/admin-test', fn () => [
-    'user'          => auth()->user()->only(['email','role','account_status']),
-    'allows_admin'  => Gate::allows('admin'),
+Route::middleware('auth')->get('/admin-test', fn() => [
+    'user' => auth()->user()->only(['email', 'role', 'account_status']),
+    'allows_admin' => Gate::allows('admin'),
 ]);
 
 // Healthcheck para Render/monitoreo
@@ -71,22 +75,22 @@ Route::get('/healthz', function () {
             try {
                 $pivotCount = DB::table('profile_service')->count();
             } catch (\Throwable $e) {
-                $pivotCount = 'error: '.$e->getMessage();
+                $pivotCount = 'error: ' . $e->getMessage();
             }
         } else {
             $pivotId = 'table-missing';
         }
     } catch (\Throwable $e) {
-        Log::warning('Healthcheck DB error: '.$e->getMessage());
+        Log::warning('Healthcheck DB error: ' . $e->getMessage());
     }
 
     return response()->json([
-        'ok'           => $db === 'up',
-        'app_env'      => config('app.env'),
-        'db'           => $db,
-        'migrations'   => $migrations,
-        'pivot_id'     => $pivotId,
-        'pivot_count'  => $pivotCount,
+        'ok' => $db === 'up',
+        'app_env' => config('app.env'),
+        'db' => $db,
+        'migrations' => $migrations,
+        'pivot_id' => $pivotId,
+        'pivot_count' => $pivotCount,
     ], $db === 'up' ? 200 : 503);
 });
 
@@ -101,7 +105,7 @@ Route::get('/__log', function () {
     }
     $content = @file_get_contents($path);
     $tail = Str::of($content)->substr(-20000);
-    return response("<pre>".e($tail)."</pre>", 200)->header('Content-Type', 'text/html');
+    return response("<pre>" . e($tail) . "</pre>", 200)->header('Content-Type', 'text/html');
 });
 
 // Diagnóstico del pivot (solo lectura)
@@ -111,9 +115,9 @@ Route::get('/diag/pivot', function () use ($safe) {
             return response()->json(['exists' => false], 200);
         }
         return response()->json([
-            'exists'     => true,
+            'exists' => true,
             'has_id_col' => Schema::hasColumn('profile_service', 'id'),
-            'sample'     => DB::table('profile_service')->limit(5)->get(['profile_id','service_id']),
+            'sample' => DB::table('profile_service')->limit(5)->get(['profile_id', 'service_id']),
         ], 200);
     });
 });
@@ -127,30 +131,30 @@ Route::get('/diag/pivot', function () use ($safe) {
 */
 Route::get('/__seed-admin', function (Request $r) use ($safe) {
     return $safe(function () use ($r) {
-        $token    = $r->query('token');
+        $token = $r->query('token');
         $expected = env('ADMIN_SEED_TOKEN');
         abort_unless($token && $expected && hash_equals($expected, $token), 403, 'Forbidden');
 
         $email = env('ADMIN_EMAIL');
-        $pass  = env('ADMIN_PASSWORD');
+        $pass = env('ADMIN_PASSWORD');
         abort_unless($email && $pass, 422, 'Faltan ADMIN_EMAIL o ADMIN_PASSWORD');
 
         $user = User::updateOrCreate(
             ['email' => $email],
             [
-                'name'              => 'Admin',
-                'password'          => Hash::make($pass),
-                'role'              => 'admin',
-                'account_status'    => 'active',
+                'name' => 'Admin',
+                'password' => Hash::make($pass),
+                'role' => 'admin',
+                'account_status' => 'active',
                 'email_verified_at' => now(),
             ]
         );
 
         return response()->json([
-            'ok'    => true,
-            'id'    => $user->id,
+            'ok' => true,
+            'id' => $user->id,
             'email' => $user->email,
-            'role'  => $user->role,
+            'role' => $user->role,
         ]);
     });
 })->middleware('throttle:3,1');
@@ -170,7 +174,7 @@ Route::get('/', function () use ($safe) {
             $now = DB::select('select now() as now');
             $dbNow = $now[0]->now ?? null;
         } catch (\Throwable $e) {
-            $dbNow = 'db-error: '.$e->getMessage();
+            $dbNow = 'db-error: ' . $e->getMessage();
         }
 
         return response()->view('welcome', [
@@ -179,12 +183,12 @@ Route::get('/', function () use ($safe) {
         ], 200);
     }
 
-    return $safe(fn () => app(SearchController::class)->home(request()));
+    return $safe(fn() => app(SearchController::class)->home(request()));
 })->name('home');
 
 // Búsqueda (GET)
 Route::get('/search', function () use ($safe) {
-    return $safe(fn () => app(SearchController::class)->search(request()));
+    return $safe(fn() => app(SearchController::class)->search(request()));
 })->name('search');
 
 // Perfil público por slug (pasando también el Request)
@@ -216,6 +220,28 @@ Route::get('/dashboard', function () {
 
 /*
 |--------------------------------------------------------------------------
+| Specialties suggest
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/specialties/suggest', function (Request $request) {
+    $term = trim($request->get('q', ''));
+
+    if (mb_strlen($term) < 2) {
+        return response()->json([]);
+    }
+
+    $specialties = Specialty::query()
+        ->where('name', 'LIKE', "%{$term}%")
+        ->orderBy('name')
+        ->limit(10)
+        ->get(['id', 'name']);
+
+    return response()->json($specialties);
+})->name('specialties.suggest');
+
+/*
+|--------------------------------------------------------------------------
 | Área autenticada
 |--------------------------------------------------------------------------
 */
@@ -232,9 +258,9 @@ Route::middleware('auth')->group(function () {
 });
 
 /*
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
 | Admin
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
 */
 Route::middleware(['auth', 'can:admin'])
     ->prefix('admin')
@@ -242,17 +268,29 @@ Route::middleware(['auth', 'can:admin'])
     ->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+        // Gestión de usuarios
         Route::get('/users', [UserApprovalController::class, 'index'])->name('users.index');
-        Route::post('/users/{user}/approve',  [UserApprovalController::class, 'approve'])->name('users.approve');
-        Route::post('/users/{user}/reject',   [UserApprovalController::class, 'reject'])->name('users.reject');
-        Route::post('/users/{user}/suspend',  [UserApprovalController::class, 'suspend'])->name('users.suspend');
+        Route::post('/users/{user}/approve', [UserApprovalController::class, 'approve'])->name('users.approve');
+        Route::post('/users/{user}/reject', [UserApprovalController::class, 'reject'])->name('users.reject');
+        Route::post('/users/{user}/suspend', [UserApprovalController::class, 'suspend'])->name('users.suspend');
         Route::post('/users/{user}/activate', [UserApprovalController::class, 'activate'])->name('users.activate');
-        Route::delete('/users/{user}',        [UserApprovalController::class, 'destroy'])->name('users.destroy');
+        Route::delete('/users/{user}', [UserApprovalController::class, 'destroy'])->name('users.destroy');
 
+        // Gestión de edición de perfiles
         Route::get('/edits', [AdminEditController::class, 'index'])->name('edits.index');
         Route::post('/edits/{edit}/approve', [AdminEditController::class, 'approve'])->name('edits.approve');
-        Route::post('/edits/{edit}/reject',  [AdminEditController::class, 'reject'])->name('edits.reject');
+        Route::post('/edits/{edit}/reject', [AdminEditController::class, 'reject'])->name('edits.reject');
+
+        // 📌 NUEVO → ABM de especialidades (disciplinas)
+        Route::resource('specialties', \App\Http\Controllers\Admin\SpecialtyController::class)
+            ->except(['show']);
+        Route::get('specialties/bulk', [\App\Http\Controllers\Admin\SpecialtyController::class, 'bulkForm'])
+            ->name('specialties.bulk');
+
+        Route::post('specialties/bulk', [\App\Http\Controllers\Admin\SpecialtyController::class, 'bulkStore'])
+            ->name('specialties.bulk.store');
     });
+
 
 /*
 |--------------------------------------------------------------------------

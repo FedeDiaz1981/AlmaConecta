@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use App\Models\{Profile, Service, Edit};
+use App\Models\{Profile, Service, Edit, Specialty};
 
 class ProviderProfileController extends Controller
 {
@@ -25,10 +25,15 @@ class ProviderProfileController extends Controller
             ->latest()
             ->first();
 
-        // “Especialidad”: usamos servicios
+        // Servicios
         $services = Service::orderBy('name')->get();
 
-        return view('dashboard.profile_edit', compact('profile', 'services', 'pendingEdit'));
+        // Especialidades (disciplinas) activas
+        $specialties = Specialty::where('active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('dashboard.profile_edit', compact('profile', 'services', 'pendingEdit', 'specialties'));
     }
 
     public function saveDraft(Request $request)
@@ -65,6 +70,9 @@ class ProviderProfileController extends Controller
             'whatsapp'       => 'nullable|string|max:30',
             'contact_email'  => 'nullable|email|max:255',
             'template_key'   => 'required|in:a,b',
+            // especialidades (muchas)
+            'specialties'    => 'required|array|min:1',
+            'specialties.*'  => 'integer|exists:specialties,id',
         ]);
 
         // modalidad -> flags
@@ -94,7 +102,10 @@ class ProviderProfileController extends Controller
             'lng'             => $data['lng'] ?? null,
             'whatsapp'        => $data['whatsapp'] ?? null,
             'contact_email'   => $data['contact_email'] ?? null,
+            // NUEVO: especialidades seleccionadas
+            'specialties'     => $data['specialties'] ?? [],
         ];
+
         if ($photoPath) {
             $payload['photo_path'] = $photoPath;
         }

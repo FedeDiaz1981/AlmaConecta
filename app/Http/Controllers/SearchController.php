@@ -7,14 +7,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Profile;
-use App\Models\Service;
+use App\Models\Specialty;
 
 class SearchController extends Controller
 {
     public function home()
     {
-        // Para el autocompletado en la vista (home.blade.php)
-        $serviceNames = Service::orderBy('name')->pluck('name');
+        // Autocompletado: ahora toma los nombres de SPECIALTIES activas
+        $serviceNames = Specialty::where('active', true)
+            ->orderBy('name')
+            ->pluck('name');
+
+        // La vista sigue recibiendo $serviceNames para no romper JS existente
         return view('home', compact('serviceNames'));
     }
 
@@ -78,18 +82,18 @@ class SearchController extends Controller
             }
         }
 
-        // Seguridad adicional para el campo q: si hay texto y NO existe como service, lo ignoramos
-        if ($q !== '' && !Service::where('name', $q)->exists()) {
+        // Seguridad adicional: si q no coincide con ninguna SPECIALTY activa, lo ignoramos
+        if ($q !== '' && !Specialty::where('active', true)->where('name', $q)->exists()) {
             $q = '';
         }
 
         // Base de búsqueda
         $base = Profile::query()
-            ->with('service')
+            ->with('specialties')
             ->whereIn('status', ['approved', 'active'])
             ->when($q !== '', function ($query) use ($q) {
-                // Si q es un service válido, priorizamos match exacto por service
-                $query->whereHas('service', fn ($s) => $s->where('name', $q));
+                // q matchea por nombre de SPECIALTY
+                $query->whereHas('specialties', fn($s) => $s->where('name', $q));
             });
 
         // Si aún no tenemos centro => filtro simple por modalidad
@@ -105,7 +109,7 @@ class SearchController extends Controller
                 'q'       => $q,
                 'loc'     => $locText,
                 'lat'     => $lat,
-                'lng'     => $lng,   // <- esta línea está perfecta aquí
+                'lng'     => $lng,
                 'r'       => $radius,
                 'remote'  => $remote,
             ]);
@@ -134,6 +138,39 @@ class SearchController extends Controller
                 'east'  => $bbox['east']  + $dLng,
             ];
         }
+
+        /**
+         * SI ESTAMOS EN SQLITE: no hay funciones trigonométricas (acos, radians, etc.)
+         * Hacemos búsqueda simplificada: filtro por bbox + modalidad, sin cálculo de distancia.
+         */
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $results = $base
+                ->where(function ($w) use ($bbox, $remote) {
+                    $w->where(function ($z) use ($bbox) {
+                        $z->where('mode_presential', true)
+                          ->whereNotNull('lat')->whereNotNull('lng')
+                          ->whereBetween('lat', [$bbox['south'], $bbox['north']])
+                          ->whereBetween('lng', [$bbox['west'],  $bbox['east']]);
+                    });
+                    if ($remote) {
+                        $w->orWhere('mode_remote', true);
+                    }
+                })
+                ->orderBy('id') // orden simple
+                ->paginate(20);
+
+            return view('search.results', [
+                'results' => $results,
+                'q'       => $q,
+                'loc'     => $locText,
+                'lat'     => $lat,
+                'lng'     => $lng,
+                'r'       => $radius,
+                'remote'  => $remote,
+            ]);
+        }
+
+        // --- Resto: sólo para motores que soportan trigonometría (MySQL/Postgres) ---
 
         // Expresión de distancia (Haversine con coseno esférico)
         $distExpr = "(6371 * acos( cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)) ))";
@@ -165,7 +202,7 @@ class SearchController extends Controller
             'q'       => $q,
             'loc'     => $locText,
             'lat'     => $lat,
-            'lng'     => $lng,   // <- también correcto acá
+            'lng'     => $lng,
             'r'       => $radius,
             'remote'  => $remote,
         ]);
@@ -173,7 +210,7 @@ class SearchController extends Controller
 
     public function show(string $slug, Request $request)
     {
-        $profile = Profile::with(['service'])
+        $profile = Profile::with(['specialties'])
             ->where('slug', $slug)
             ->firstOrFail();
 

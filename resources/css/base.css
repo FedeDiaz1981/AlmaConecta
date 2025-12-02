@@ -1,0 +1,19 @@
+/* resources/css/base.css */
+@import "theme.css";
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ac-blue-deep);
+  color: var(--ac-silver);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: var(--ac-blue-bright);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ac-gold);
+}

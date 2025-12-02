@@ -2,60 +2,66 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Profile extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'display_name',
         'slug',
-        'service_id', // <---
         'about',
-        'video_url',
-        'template_key',
-        'mode_remote',
         'mode_presential',
+        'mode_remote',
         'country',
         'state',
         'city',
         'address',
         'lat',
         'lng',
-        'photo_path',
+        'template_key',
         'status',
+        'approved_at',
         'whatsapp',
         'contact_email',
+        'photo_path',
+        'video_url',
     ];
 
     protected $casts = [
-        'mode_remote' => 'boolean',
         'mode_presential' => 'boolean',
-        'lat' => 'float',
-        'lng' => 'float',
+        'mode_remote'     => 'boolean',
+        'approved_at'     => 'datetime',
+        'lat'             => 'float',
+        'lng'             => 'float',
     ];
 
-    // Relaciones
-    public function specialty()
-    {
-        return $this->belongsTo(Specialty::class);
-    }
-
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // N:M con services. Usa la tabla pivote `profile_service` (convención Laravel).
-    public function service()
+    // Servicios antiguos (lo dejamos por compatibilidad, aunque el select está oculto)
+    public function services(): BelongsToMany
     {
-        return $this->belongsTo(Service::class);
+        return $this->belongsToMany(Service::class, 'profile_service');
     }
 
-
-    // 1:N con media (ajustá el modelo si tu clase se llama distinto)
-    public function media()
+    // NUEVO: muchas especialidades a través de profile_specialty
+    public function specialties(): BelongsToMany
     {
-        return $this->hasMany(ProfileMedia::class);
+        return $this->belongsToMany(Specialty::class, 'profile_specialty')
+                    ->withTimestamps();
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class)->orderBy('position');
     }
 }

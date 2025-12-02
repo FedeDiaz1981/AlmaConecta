@@ -19,13 +19,15 @@
 
         <div>
             <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
+                          :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div>
             <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
+            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full"
+                          :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
@@ -33,7 +35,9 @@
                     <p class="text-sm mt-2 text-gray-800">
                         {{ __('Your email address is unverified.') }}
 
-                        <button form="send-verification" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <button form="send-verification"
+                                class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md
+                                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             {{ __('Click here to re-send the verification email.') }}
                         </button>
                     </p>
@@ -45,6 +49,33 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+        {{-- NUEVO: selección de múltiples especialidades --}}
+        @php
+            $selectedSpecialties = old('specialties', isset($profile)
+                ? $profile->specialties->pluck('id')->toArray()
+                : []);
+        @endphp
+
+        <div>
+            <x-input-label :value="__('Specialties')" />
+
+            <div class="mt-2 space-y-1">
+                @foreach($specialties as $specialty)
+                    <label class="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            name="specialties[]"
+                            value="{{ $specialty->id }}"
+                            @checked(in_array($specialty->id, $selectedSpecialties))
+                        >
+                        <span>{{ $specialty->name }}</span>
+                    </label>
+                @endforeach
+            </div>
+
+            <x-input-error class="mt-2" :messages="$errors->get('specialties')" />
         </div>
 
         <div class="flex items-center gap-4">

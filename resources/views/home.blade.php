@@ -1,337 +1,399 @@
-{{-- resources/views/home.blade.php --}}
-<x-app-layout>
-    {{-- Bootstrap 5 + Icons solo en esta vista --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+@extends('layouts.app')
 
-    <x-slot name="header">
-        <h1 class="fs-3 fw-semibold m-0">Encontrá profesionales</h1>
-    </x-slot>
+@section('title', 'Alma Conecta - Bienestar holístico')
 
-    <div class="py-5">
-        <div class="container-xxl">
-            {{-- Hero card con CTA para abrir el modal --}}
-            <div class="card border-0 shadow-sm overflow-hidden">
-                <div style="height:4px;background:linear-gradient(90deg,#6366f1,#22d3ee,#14b8a6)"></div>
-                <div class="card-body p-4 p-md-5 text-center">
-                    <h2 class="fw-semibold mb-2">Buscá por especialidad y zona</h2>
-                    <p class="text-secondary mb-4">Ej.: “acupuntura”, “yoga”, “coach”, “fonoaudiología”…</p>
-                    <button class="btn btn-primary btn-lg rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#searchModal">
-                        <i class="bi bi-search me-2"></i> Abrir búsqueda
-                    </button>
+@section('content')
+
+{{-- ============================= --}}
+{{-- HERO / PORTADA (con imagen IA de fondo) --}}
+{{-- ============================= --}}
+<section
+    class="relative w-full min-h-[80vh] md:min-h-[95vh] text-silver bg-cover bg-top overflow-hidden"
+    style="background-image: url('{{ asset('hero_lma_conecta.png') }}');"
+>
+    {{-- Capa oscura para que se lea el texto --}}
+    <div class="absolute inset-0 bg-black/40"></div>
+
+    {{-- Luz dorada encima (tu gradiente) --}}
+    <div class="absolute inset-0 opacity-50"
+         style="background: radial-gradient(circle at 25% 15%, rgba(203,160,67,0.45), transparent 55%);">
+    </div>
+
+    {{-- CONTENIDO --}}
+    <div class="relative max-w-8xl mx-auto md:ml-[5%] px-6 w-full pt-20 md:pt-32 pb-12">
+        <div class="w-full md:max-w-4xl mx-auto md:mx-0 text-center md:text-left">
+
+            <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
+                Encontrá tu espacio de <span class="text-gold">bienestar holístico</span>
+            </h1>
+
+            <p class="text-silver/80 text-base md:text-lg mb-10">
+                Conectá con terapeutas, facilitadores y espacios de bienestar en un solo lugar.
+            </p>
+
+            {{-- Buscador principal --}}
+            <form method="GET" action="{{ route('search') }}"
+                  class="bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
+                         mx-auto md:mx-0">
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {{-- q: especialidad (solo opciones existentes) --}}
+                    <div class="flex flex-col md:col-span-2 relative">
+                        <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                            ¿Qué estás buscando?
+                        </label>
+
+                        <div class="relative">
+                            <input type="text"
+                                   name="q"
+                                   id="q"
+                                   autocomplete="off"
+                                   placeholder="Reiki, Yoga, Constelaciones..."
+                                   value="{{ request('q') }}"
+                                   class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
+                                          px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+
+                            {{-- Botón limpiar selección --}}
+                            <button type="button"
+                                    id="q-clear"
+                                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
+                                ✕
+                            </button>
+                        </div>
+
+                        {{-- id de la especialidad seleccionada --}}
+                        <input type="hidden"
+                               name="specialty_id"
+                               id="specialty_id"
+                               value="{{ request('specialty_id') }}">
+
+                        {{-- Contenedor de sugerencias --}}
+                        <div id="q-suggestions"
+                             class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
+                                    max-h-56 overflow-auto text-sm hidden z-20">
+                            {{-- se completa por JS --}}
+                        </div>
+                    </div>
+
+                    {{-- loc: ubicación --}}
+                    <div class="flex flex-col">
+                        <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                            ¿Dónde?
+                        </label>
+                        <input type="text"
+                               name="loc"
+                               id="loc"
+                               placeholder="Ciudad o barrio"
+                               value="{{ request('loc') }}"
+                               class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
+                                      px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+                        <input type="hidden" id="lat" name="lat" value="{{ request('lat') }}">
+                        <input type="hidden" id="lng" name="lng" value="{{ request('lng') }}">
+                    </div>
+
+                    {{-- radio + modalidad + botón --}}
+                    <div class="flex flex-col justify-end gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                                Área de búsqueda
+                            </label>
+                            <select name="r"
+                                    class="w-full bg-blueNight/70 border border-blueNight text-silver text-xs rounded-xl
+                                           px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+                                @foreach([5, 10, 20, 50, 100] as $radius)
+                                    <option value="{{ $radius }}" {{ (int)request('r', 20) === $radius ? 'selected' : '' }}>
+                                        Hasta {{ $radius }} km
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <label class="flex items-center gap-2 text-[16px] text-silver/70 text-left">
+                            <input type="checkbox"
+                                   name="remote"
+                                   value="1"
+                                   class="rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
+                                   {{ request()->boolean('remote', true) ? 'checked' : '' }}>
+                            <span>Incluir modalidad online/remota</span>
+                        </label>
+
+                        <button type="submit"
+                                class="w-full px-6 py-2.5 rounded-xl bg-gold text-blueDeep text-sm font-semibold
+                                       shadow-soft hover:bg-goldStrong transition">
+                            Buscar
+                        </button>
+                    </div>
                 </div>
+            </form>
+
+            <p class="mt-4 text-[11px] text-silver/60">
+                Tip: podés buscar directamente por especialidad.
+            </p>
+        </div>
+    </div>
+</section>
+
+
+
+{{-- ============================= --}}
+{{-- BLOQUE APP / BENEFICIOS (equivalente a “publicidad”) --}}
+{{-- ============================= --}}
+<section class="bg-blueNight py-12 md:py-16">
+    <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+
+        {{-- Imagen / mockup app (podés reemplazar por tu imagen real) --}}
+        <div class="flex justify-center md:justify-start">
+            <div class="relative h-72 w-40 rounded-3xl bg-gradient-to-br from-blueMid to-blueDeep shadow-strong flex items-center justify-center">
+                {{-- Acá podrías poner un <img> con tu mockup --}}
+                <span class="text-[11px] text-silver/70 px-4 text-center">
+                    Aquí va el mockup de la app / sitio de Alma Conecta
+                </span>
+            </div>
+        </div>
+
+        {{-- Texto --}}
+        <div>
+            <h2 class="text-2xl font-semibold text-silver mb-3">
+                Bienestar a un clic de distancia
+            </h2>
+            <p class="text-sm text-silver/80 mb-4">
+                Explorá prácticas, filtrá por ubicación y modalidad, y conectá con el espacio que mejor resuene con vos.
+            </p>
+
+            <ul class="space-y-2 text-sm text-silver/85 mb-6">
+                <li>• Búsqueda por especialidad y ubicación.</li>
+                <li>• Perfiles verificados y moderados.</li>
+                <li>• Modalidad presencial y remota.</li>
+            </ul>
+
+            {{-- CTA doble --}}
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('search') }}"
+                   class="px-5 py-2.5 rounded-full bg-gold text-blueDeep text-sm font-semibold shadow-soft hover:bg-goldStrong transition">
+                    Explorar espacios
+                </a>
+                <a href="{{ route('dashboard.profile.edit') }}"
+                   class="px-5 py-2.5 rounded-full border border-gold text-gold text-sm font-semibold hover:bg-gold/10 transition">
+                    Soy facilitador/a
+                </a>
             </div>
         </div>
     </div>
+</section>
 
-    {{-- MODAL: búsqueda en columna (responsive) --}}
-    <div class="modal fade" id="searchModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <form id="searchForm" class="modal-content" method="GET" action="{{ route('search') }}">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-search me-2"></i>Nueva búsqueda</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
+{{-- ============================= --}}
+{{-- PRÁCTICAS MÁS BUSCADAS        --}}
+{{-- ============================= --}}
+<section class="bg-blueDeep py-12 md:py-16">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-silver">
+                Prácticas más buscadas
+            </h2>
+            <a href="{{ route('search') }}" class="text-sm text-gold hover:text-goldLight">
+                Ver todas
+            </a>
+        </div>
 
-                <div class="modal-body">
-                    <div class="vstack gap-3">
-                        {{-- Qué buscás (AUTOCOMPLETE FORZADO A SERVICES) --}}
-                        <div class="position-relative">
-                            <label class="form-label">Especialidad o palabra clave</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input
-                                    type="text"
-                                    name="q"
-                                    id="q"
-                                    class="form-control"
-                                    autocomplete="off"
-                                    placeholder="¿Qué buscás? (ej: acupuntura, yoga)"
-                                    value="{{ request('q') }}"
-                                >
-                            </div>
-                            <div id="svcDropdown" class="dropdown-menu w-100 mt-1"></div>
-                            <small id="serviceHelp" class="text-danger d-none">Elegí una especialidad de la lista.</small>
+        @if(isset($topSpecialties) && count($topSpecialties))
+            <div class="flex flex-wrap gap-3">
+                @foreach($topSpecialties as $specialty)
+                    <a href="{{ route('search', ['q' => $specialty->name]) }}"
+                       class="px-4 py-2 rounded-full bg-blueNight border border-blueMid text-silver text-xs
+                              hover:border-gold hover:text-gold transition">
+                        {{ $specialty->name }}
+                    </a>
+                @endforeach
+            </div>
+        @else
+            <p class="text-silver/60 text-sm">
+                Todavía no hay prácticas destacadas cargadas.
+            </p>
+        @endif
+    </div>
+</section>
+
+{{-- ============================= --}}
+{{-- FACILITADORES DESTACADOS      --}}
+{{-- ============================= --}}
+<section class="bg-blueNight py-12 md:py-16">
+    <div class="max-w-6xl mx-auto px-6">
+
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-silver">
+                Facilitadores destacados
+            </h2>
+            <a href="{{ route('search') }}" class="text-sm text-gold hover:text-goldLight">
+                Ver más
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            @foreach(($featuredProfiles ?? []) as $profile)
+                <article class="bg-blueDeep p-5 rounded-2xl shadow-soft border border-blueInk/60 transition
+                               hover:shadow-strong hover:border-gold/40">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="h-12 w-12 rounded-full bg-blueNight overflow-hidden">
+                            {{-- foto de perfil si la tenés --}}
                         </div>
-
-                        {{-- Ubicación con autocomplete --}}
-                        <div class="position-relative">
-                            <label class="form-label">Ubicación</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-                                <input type="text" name="loc" id="loc" class="form-control"
-                                       placeholder="Ciudad, barrio o indicación (vacío = usar mi ubicación)"
-                                       autocomplete="off" value="{{ request('loc') }}">
-                                <button class="btn btn-outline-secondary" type="button" id="btnMyLocation">
-                                    <i class="bi bi-crosshair me-1"></i> Mi ubicación
-                                </button>
-                            </div>
-                            <div id="locDropdown" class="dropdown-menu w-100 mt-1"></div>
+                        <div>
+                            <h3 class="text-silver font-semibold text-sm">
+                                {{ $profile->display_name }}
+                            </h3>
+                            <p class="text-silver/70 text-xs">
+                                {{ $profile->specialties->pluck('name')->take(2)->join(' · ') }}
+                            </p>
                         </div>
-
-                        {{-- Radio + remoto --}}
-                        <div class="row g-3 align-items-center">
-                            <div class="col-6 col-sm-4 col-md-3">
-                                <label class="form-label mb-1">Radio (km)</label>
-                                <input type="number" min="1" step="1" name="r" class="form-control"
-                                       value="{{ request('r', 25) }}">
-                            </div>
-                            <div class="col-6 col-sm-8 col-md-9">
-                                <div class="form-check form-switch mt-4">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="remote" name="remote"
-                                           value="1" {{ request('remote', 1) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="remote">Incluir modalidad remota</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Hidden coords (las completa el script) --}}
-                        <input type="hidden" id="lat" name="lat" value="{{ request('lat') }}">
-                        <input type="hidden" id="lng" name="lng" value="{{ request('lng') }}">
-
-                        <div id="geoStatus" class="form-text text-muted"></div>
                     </div>
-                </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button id="searchBtn" class="btn btn-primary">
-                        <i class="bi bi-search me-2"></i>Buscar
-                    </button>
-                </div>
-            </form>
+                    <p class="text-silver/75 text-xs mb-4 line-clamp-3">
+                        {{ Str::limit($profile->about, 140) }}
+                    </p>
+
+                    <div class="flex justify-between items-center text-[11px] text-silver/60">
+                        <span>{{ $profile->city }}, {{ $profile->state }}</span>
+                        <a href="{{ route('profiles.show', $profile->slug) }}"
+                           class="font-semibold text-gold hover:text-goldLight">
+                            Ver perfil
+                        </a>
+                    </div>
+                </article>
+            @endforeach
         </div>
     </div>
+</section>
 
-    {{-- Bootstrap JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const input      = document.getElementById('q');
+        const hidId      = document.getElementById('specialty_id');
+        const box        = document.getElementById('q-suggestions');
+        const clearBtn   = document.getElementById('q-clear');
+        const form       = input ? input.form : null;
 
-    {{-- Autocompletado FORZADO de services --}}
-    <script>
-    (() => {
-        // Pasá esta variable desde el controlador: $serviceNames = Service::orderBy('name')->pluck('name');
-        const SERVICES = @json(($serviceNames ?? collect())->values());
+        if (!input || !hidId || !box || !form) return;
 
-        const $q      = document.getElementById('q');
-        const $dd     = document.getElementById('svcDropdown');
-        const $help   = document.getElementById('serviceHelp');
-        const $search = document.getElementById('searchBtn');
-        let activeIdx = -1; // item activo en el dropdown
+        let timeoutId = null;
+        let lastItems = [];
 
-        const norm = s => (s||'').toString().trim().toLowerCase();
-        const isValid = val => SERVICES.some(s => norm(s) === norm(val));
-
-        const setHelp = (show) => { $help.classList.toggle('d-none', !show); };
-        const setBtn  = () => {
-            // Regla: si el campo está vacío => permitir (búsqueda libre),
-            // si tiene texto, solo permitir si es un servicio válido.
-            const v = $q.value.trim();
-            const ok = v === '' || isValid(v);
-            $search.disabled = !ok;
-            setHelp(!ok && v !== '');
+        const hideBox = () => {
+            box.classList.add('hidden');
+            box.innerHTML = '';
         };
 
-        const showDD = (items) => {
-            if (!items.length) { $dd.classList.remove('show'); $dd.innerHTML = ''; activeIdx = -1; return; }
-            $dd.innerHTML = items.map((t,i) => `
-                <button type="button" class="dropdown-item ${i===0?'active':''}" data-value="${t}">
-                    ${highlight(t, $q.value)}
-                </button>
-            `).join('');
-            activeIdx = 0;
-            $dd.classList.add('show');
+        const lockInput = () => {
+            input.readOnly = true;
+            input.classList.add('cursor-default');
+            if (clearBtn) clearBtn.classList.remove('hidden');
         };
 
-        const highlight = (text, query) => {
-            const q = norm(query);
-            if (!q) return text;
-            const idx = norm(text).indexOf(q);
-            if (idx < 0) return text;
-            return `${text.substring(0,idx)}<strong>${text.substring(idx, idx+q.length)}</strong>${text.substring(idx+q.length)}`;
+        const unlockInput = () => {
+            input.readOnly = false;
+            input.value = '';
+            hidId.value = '';
+            input.classList.remove('cursor-default');
+            if (clearBtn) clearBtn.classList.add('hidden');
         };
 
-        const filter = (q) => {
-            const n = norm(q);
-            if (!n) return SERVICES.slice(0, 8);
-            const starts  = SERVICES.filter(s => norm(s).startsWith(n));
-            const contains = SERVICES.filter(s => !starts.includes(s) && norm(s).includes(n));
-            return [...starts, ...contains].slice(0, 8);
+        const showSuggestions = (items) => {
+            lastItems = items;
+            if (!items.length) {
+                hideBox();
+                return;
+            }
+
+            box.innerHTML = '';
+            items.forEach(item => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.textContent = item.name;
+                option.className =
+                    'w-full text-left px-3 py-2 hover:bg-blueMid/60 text-silver text-sm';
+                option.addEventListener('click', () => {
+                    input.value = item.name;
+                    hidId.value = item.id;          // guardamos id válido
+                    hideBox();
+                    lockInput();
+                });
+                box.appendChild(option);
+            });
+
+            box.classList.remove('hidden');
         };
 
-        const pick = (val) => {
-            $q.value = val;
-            hideDD();
-            setBtn();
+        const fetchSuggestions = async (term) => {
+            if (term.length < 2 || input.readOnly) {
+                hideBox();
+                return;
+            }
+
+            try {
+                const url = "{{ route('specialties.suggest') }}?q=" + encodeURIComponent(term);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                const data = await res.json();
+                showSuggestions(data);
+            } catch (e) {
+                console.error(e);
+            }
         };
 
-        const hideDD = () => { $dd.classList.remove('show'); activeIdx = -1; };
-
-        // Eventos
-        $q.addEventListener('input', () => {
-            const items = filter($q.value);
-            showDD(items);
-            setBtn();
-        });
-
-        // Click en sugerencia
-        $dd.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-value]');
-            if (!btn) return;
-            pick(btn.dataset.value);
-        });
-
-        // Cerrar dropdown al click fuera
-        document.addEventListener('click', (e) => {
-            if (!$dd.contains(e.target) && e.target !== $q) hideDD();
-        });
-
-        // Navegación con teclado
-        $q.addEventListener('keydown', (e) => {
-            if (!$dd.classList.contains('show')) return;
-            const items = Array.from($dd.querySelectorAll('.dropdown-item'));
-            if (!items.length) return;
-
-            if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = (activeIdx+1) % items.length; }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = (activeIdx-1+items.length) % items.length; }
-            else if (e.key === 'Enter') { e.preventDefault(); items[activeIdx]?.click(); return; }
-            else if (e.key === 'Escape') { hideDD(); return; }
-
-            items.forEach((el,i)=>el.classList.toggle('active', i===activeIdx));
-        });
-
-        // Al salir del campo: si tiene texto y NO es válido => limpiar y avisar
-        $q.addEventListener('blur', () => {
-            setTimeout(() => { // permitir click en dropdown
-                if ($q.value.trim() !== '' && !isValid($q.value)) {
-                    $q.value = '';
-                    setBtn();
-                }
-                hideDD();
-            }, 120);
-        });
-
-        // Estado inicial del botón
-        setBtn();
-    })();
-    </script>
-
-    {{-- Autocomplete + geolocalización (Nominatim + Geolocation API) --}}
-    <script>
-    (function () {
-        const form   = document.getElementById('searchForm');
-        const btn    = document.getElementById('searchBtn');
-        const status = document.getElementById('geoStatus');
-        const loc    = document.getElementById('loc');
-        const dd     = document.getElementById('locDropdown');
-        const latEl  = document.getElementById('lat');
-        const lngEl  = document.getElementById('lng');
-        const myBtn  = document.getElementById('btnMyLocation');
-
-        const debounce = (fn, ms=350) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
-        const setBusy  = (v) => { btn.disabled = v; btn.innerHTML = v ? '<span class="spinner-border spinner-border-sm me-2"></span>Buscando…' : '<i class="bi bi-search me-2"></i>Buscar'; };
-
-        function showSuggestions(items){
-            if (!items.length) { dd.classList.remove('show'); dd.innerHTML=''; return; }
-            dd.innerHTML = items.map(i => `
-              <button type="button" class="dropdown-item" data-lat="${i.lat}" data-lng="${i.lon}">
-                <i class="bi bi-geo-alt me-2"></i>${i.display_name}
-              </button>
-            `).join('');
-            dd.classList.add('show');
+        // Si ya viene una especialidad seleccionada (por querystring), bloquear
+        if (hidId.value && input.value.trim() !== '') {
+            lockInput();
         }
 
-        const suggest = debounce(async () => {
-            const q = loc.value.trim();
-            latEl.value = ''; lngEl.value = '';
-            if (q.length < 3) { showSuggestions([]); return; }
-            try {
-                const url = new URL('https://nominatim.openstreetmap.org/search');
-                url.searchParams.set('q', q);
-                url.searchParams.set('format','json');
-                url.searchParams.set('limit','6');
-                url.searchParams.set('accept-language','es');
-                const res = await fetch(url, { headers: { 'Accept':'application/json' } });
-                const data = await res.json();
-                showSuggestions(Array.isArray(data) ? data : []);
-            } catch { showSuggestions([]); }
-        }, 350);
-
-        loc.addEventListener('input', suggest);
-        dd.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-lat]');
-            if (!btn) return;
-            latEl.value = btn.dataset.lat;
-            lngEl.value = btn.dataset.lng;
-            loc.value   = btn.textContent.trim();
-            dd.classList.remove('show');
+        // Cada vez que escribe, invalidamos el id hasta que elija una opción
+        input.addEventListener('input', () => {
+            if (input.readOnly) return;
+            const term = input.value.trim();
+            hidId.value = '';          // texto cambió → no hay selección válida
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => fetchSuggestions(term), 250);
         });
-        document.addEventListener('click', (e) => { if (!dd.contains(e.target) && e.target !== loc) dd.classList.remove('show'); });
 
-        myBtn.addEventListener('click', async () => {
-            status.textContent = 'Obteniendo tu ubicación…';
-            const coords = await getCurrentPosition();
-            if (coords) {
-                latEl.value = coords.lat;
-                lngEl.value = coords.lng;
-                loc.value   = '';
-                status.textContent = 'Ubicación cargada.';
-            } else {
-                status.textContent = 'No pudimos obtener tu ubicación.';
+        // Al salir del campo: si no hay selección válida, limpiar texto
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                hideBox();
+                if (!hidId.value) {
+                    input.value = '';
+                }
+            }, 150);
+        });
+
+        // Mostrar sugerencias al enfocar si ya hay texto y no está bloqueado
+        input.addEventListener('focus', () => {
+            if (input.readOnly) return;
+            const term = input.value.trim();
+            if (term.length >= 2 && !hidId.value) {
+                fetchSuggestions(term);
             }
         });
 
-        function getCurrentPosition() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) return resolve(null);
-                navigator.geolocation.getCurrentPosition(
-                    p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-                    _ => resolve(null),
-                    { enableHighAccuracy: true, timeout: 7000 }
-                );
+        // Botón limpiar: desbloquea y permite elegir otra opción
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                unlockInput();
+                input.focus();
             });
         }
 
-        async function geocodeText(q) {
-            const url = new URL('https://nominatim.openstreetmap.org/search');
-            url.searchParams.set('q', q);
-            url.searchParams.set('format','json');
-            url.searchParams.set('limit','1');
-            url.searchParams.set('accept-language','es');
-            try {
-                const res = await fetch(url, { headers: { 'Accept':'application/json' } });
-                const data = await res.json();
-                if (Array.isArray(data) && data.length) {
-                    return { lat: data[0].lat, lng: data[0].lon };
-                }
-            } catch {}
-            return null;
-        }
+        // Validar al enviar: si hay texto pero no specialty_id, no dejamos
+        form.addEventListener('submit', (e) => {
+            const term = input.value.trim();
 
-        form.addEventListener('submit', async (ev) => {
-            // NO impedir el envío por "q": el botón ya controla validez del campo.
-            if (latEl.value && lngEl.value) return;
-
-            ev.preventDefault();
-            setBusy(true);
-            status.textContent = '';
-
-            const locText = loc.value.trim();
-            let coords = null;
-
-            if (locText) {
-                status.textContent = 'Buscando ubicación…';
-                coords = await geocodeText(locText);
-                if (!coords) status.textContent = 'No se encontró esa ubicación. Se buscará sin radio.';
-            } else {
-                status.textContent = 'Obteniendo tu ubicación…';
-                coords = await getCurrentPosition();
-                if (!coords) status.textContent = 'No pudimos obtener tu ubicación. Se buscará sin radio.';
+            // Permitir búsqueda sin especialidad (por ubicación, etc)
+            if (term === '') {
+                return;
             }
 
-            if (coords) { latEl.value = coords.lat; lngEl.value = coords.lng; }
-            setBusy(false);
-            HTMLFormElement.prototype.submit.call(form);
+            if (!hidId.value) {
+                e.preventDefault();
+                alert('Seleccioná una especialidad de la lista. No se pueden agregar opciones nuevas.');
+            }
         });
-    })();
-    </script>
-</x-app-layout>
+    });
+</script>
+
+@endsection

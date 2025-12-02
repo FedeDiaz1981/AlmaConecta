@@ -1,210 +1,367 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Mi Perfil</h2>
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-xl text-gray-900">Mi perfil profesional</h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Actualizá la información que van a ver tus potenciales clientes.
+                </p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-4xl mx-auto bg-white p-6 shadow sm:rounded-lg">
+    <div class="py-10 bg-slate-50">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white/90 border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 space-y-6">
 
-            @if (session('status'))
-                <div class="mb-4 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-                    {{ session('status') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-                    <ul class="list-disc pl-5">
-                        @foreach ($errors->all() as $e)
-                            <li>{{ $e }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @php $locked = isset($pendingEdit) && $pendingEdit; @endphp
-
-            {{-- Aviso de bloqueo si hay pending --}}
-            @if($locked)
-                <div class="mb-5 rounded border border-amber-200 bg-amber-50 px-3 py-3 text-amber-900 text-sm">
-                    <div class="font-medium mb-1">Tenés una edición pendiente de aprobación.</div>
-                    <div class="mb-3">
-                        Hasta que se apruebe o la anules, no podés modificar el perfil.
-                        @if($pendingEdit?->created_at)
-                            <span class="text-amber-700">Enviada el {{ $pendingEdit->created_at->format('d/m/Y H:i') }}.</span>
-                        @endif
+                {{-- mensajes de estado --}}
+                @if (session('status'))
+                    <div class="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        {{ session('status') }}
                     </div>
-                    <form method="POST" action="{{ route('dashboard.profile.cancel') }}"
-                          onsubmit="return confirm('¿Anular la petición de aprobación?\nSe perderán los cambios enviados.');">
-                        @csrf
-                        <button class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-3 py-1.5 rounded">
-                            Anular petición
+                @endif
+
+                @if ($errors->any())
+                    <div class="mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        <div class="font-semibold mb-1">Revisá estos campos:</div>
+                        <ul class="list-disc pl-5 space-y-0.5">
+                            @foreach ($errors->all() as $e)
+                                <li>{{ $e }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @php $locked = isset($pendingEdit) && $pendingEdit; @endphp
+
+                {{-- Aviso de bloqueo si hay pending --}}
+                @if($locked)
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900 text-sm flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-xs font-semibold">
+                                !
+                            </span>
+                            <div class="font-medium">Tenés una edición pendiente de aprobación.</div>
+                        </div>
+                        <div>
+                            Hasta que se apruebe o la anules, no podés modificar el perfil.
+                            @if($pendingEdit?->created_at)
+                                <span class="text-amber-700 block">
+                                    Enviada el {{ $pendingEdit->created_at->format('d/m/Y H:i') }}.
+                                </span>
+                            @endif
+                        </div>
+                        <div>
+                            <form method="POST" action="{{ route('dashboard.profile.cancel') }}"
+                                  onsubmit="return confirm('¿Anular la petición de aprobación?\nSe perderán los cambios enviados.');">
+                                @csrf
+                                <button
+                                    class="inline-flex items-center rounded-full border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 transition">
+                                    Anular petición
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+
+                <form method="POST"
+                      action="{{ route('dashboard.profile.save') }}"
+                      enctype="multipart/form-data"
+                      class="space-y-8">
+                    @csrf
+
+                    {{-- BLOQUE: Datos principales --}}
+                    <section class="space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                                    Datos principales
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    Nombre público y especialidades que verá el usuario.
+                                </p>
+                            </div>
+                            @if($profile->status === 'approved')
+                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                                    Perfil publicado
+                                </span>
+                            @endif
+                        </div>
+
+                        <div class="grid gap-5 md:grid-cols-2">
+                            {{-- Nombre público --}}
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre público</label>
+                                <input name="display_name"
+                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
+                                       value="{{ old('display_name', $profile->display_name) }}"
+                                       {{ $locked ? 'disabled' : '' }}>
+                            </div>
+
+                            {{-- Servicio oculto (compatibilidad) --}}
+                            <input type="hidden"
+                                   name="service_id"
+                                   value="{{ old('service_id', $profile->service_id) }}">
+
+                            {{-- ESPECIALIDADES: buscador + chips --}}
+                            @php
+                                $allSpecialties = ($specialties ?? collect())->map(fn($s) => [
+                                    'id'   => $s->id,
+                                    'name' => $s->name,
+                                ]);
+
+                                $profileSpecialties = collect($profile->specialties ?? []);
+
+                                $selectedIds = old(
+                                    'specialties',
+                                    $profileSpecialties->pluck('id')->toArray()
+                                );
+                                $selectedIds = array_map('intval', $selectedIds);
+                            @endphp
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Especialidades</label>
+
+                                @if($allSpecialties->isEmpty())
+                                    <p class="text-xs text-gray-500">
+                                        Todavía no hay especialidades configuradas. Consultá con el administrador.
+                                    </p>
+                                @else
+                                    <div id="specialty-widget"
+                                         data-specialties='@json($allSpecialties)'
+                                         data-locked="{{ $locked ? '1' : '0' }}"
+                                         class="space-y-2">
+                                        <input type="text"
+                                               id="specialty-search"
+                                               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                               placeholder="Escribí para buscar especialidades..."
+                                               {{ $locked ? 'disabled' : '' }}>
+
+                                        <div id="specialty-results"
+                                             class="border border-slate-200 rounded-xl bg-white shadow-sm mt-1 hidden max-h-52 overflow-auto text-sm divide-y divide-slate-100">
+                                            {{-- items generados por JS --}}
+                                        </div>
+
+                                        <div id="specialty-selected"
+                                             class="flex flex-wrap gap-2 mt-1">
+                                            @foreach($allSpecialties as $s)
+                                                @if(in_array($s['id'], $selectedIds))
+                                                    <span class="inline-flex items-center px-2.5 py-1 bg-indigo-50 text-indigo-800 text-xs rounded-full specialty-chip"
+                                                          data-id="{{ $s['id'] }}">
+                                                        {{ $s['name'] }}
+                                                        @unless($locked)
+                                                            <button type="button"
+                                                                    class="ml-1 text-indigo-700 hover:text-indigo-900 text-xs specialty-chip-remove"
+                                                                    aria-label="Quitar">
+                                                                ×
+                                                            </button>
+                                                        @endunless
+                                                    </span>
+                                                    <input type="hidden" name="specialties[]" value="{{ $s['id'] }}">
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                        <p class="text-[11px] text-slate-500">
+                                            Podés seleccionar varias especialidades.
+                                        </p>
+                                    </div>
+                                @endif
+
+                                @error('specialties')
+                                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- BLOQUE: Modalidad y ubicación --}}
+                    <section class="space-y-4">
+                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                            Modalidad y ubicación
+                        </h3>
+
+                        <div class="grid gap-5 md:grid-cols-2">
+                            {{-- Modalidad --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Modalidad</label>
+                                @php
+                                    $currentMod = ($profile->mode_remote && $profile->mode_presential) ? 'ambas'
+                                        : ($profile->mode_remote ? 'remoto' : 'presencial');
+                                @endphp
+                                <select name="modality"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                        {{ $locked ? 'disabled' : '' }}>
+                                    <option value="remoto" {{ old('modality',$currentMod)==='remoto' ? 'selected' : '' }}>Remoto</option>
+                                    <option value="ambas" {{ old('modality',$currentMod)==='ambas' ? 'selected' : '' }}>Remoto y presencial</option>
+                                    <option value="presencial" {{ old('modality',$currentMod)==='presencial' ? 'selected' : '' }}>Presencial</option>
+                                </select>
+                            </div>
+
+                            {{-- UBICACIÓN --}}
+                            <style>
+                                .ac-wrap{position:relative}
+                                .ac-list{position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;box-shadow:0 8px 16px rgba(15,23,42,.08);max-height:16rem;overflow:auto}
+                                .ac-item{padding:.5rem .75rem;cursor:pointer;font-size:.875rem}
+                                .ac-item:hover{background:#f9fafb}
+                            </style>
+
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-sm font-medium text-slate-700">Ubicación</label>
+                                <div class="ac-wrap">
+                                    <div class="flex gap-2">
+                                        <input id="loc_input"
+                                               class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                               autocomplete="off"
+                                               placeholder="Ciudad, provincia o dirección…"
+                                               {{ $locked ? 'disabled' : '' }}>
+                                        <button type="button" id="btn_myloc"
+                                                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                {{ $locked ? 'disabled' : '' }}>
+                                            Mi ubicación
+                                        </button>
+                                    </div>
+                                    <div id="loc_list" class="ac-list hidden"></div>
+                                </div>
+                                <div class="text-xs text-gray-500" id="coords_hint" style="display:none"></div>
+
+                                <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
+                                <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
+                            </div>
+
+                            <div class="hidden md:grid-cols-3 gap-4 mt-3 md:col-span-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1">País (ISO-2)</label>
+                                    <input name="country" id="country"
+                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           value="{{ old('country',$profile->country) }}" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1">Provincia/Estado</label>
+                                    <input name="state" id="state"
+                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           value="{{ old('state',$profile->state) }}" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1">Ciudad</label>
+                                    <input name="city" id="city"
+                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           value="{{ old('city',$profile->city) }}" readonly>
+                                </div>
+                            </div>
+
+                            <div class="hidden md:col-span-2">
+                                <input name="address" id="address"
+                                       class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                       value="{{ old('address',$profile->address) }}" readonly>
+                                <p class="text-[11px] text-gray-500 mt-1">
+                                    Coordenadas:
+                                    <span id="latlngText">{{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- BLOQUE: Contacto y detalle --}}
+                    <section class="space-y-4">
+                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                            Contacto y descripción
+                        </h3>
+
+                        <div class="grid gap-5 md:grid-cols-2">
+                            {{-- WhatsApp --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">WhatsApp</label>
+                                <input name="whatsapp"
+                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       placeholder="+54 9 11 5555-5555"
+                                       value="{{ old('whatsapp', $profile->whatsapp) }}"
+                                       {{ $locked ? 'disabled' : '' }}>
+                                <p class="text-[11px] text-gray-500 mt-1">
+                                    Ingresá tu número con código de país (puede llevar +, espacios o guiones).
+                                </p>
+                            </div>
+
+                            {{-- Email --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Correo</label>
+                                <input name="contact_email" type="email"
+                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       placeholder="tucorreo@dominio.com"
+                                       value="{{ old('contact_email', $profile->contact_email) }}"
+                                       {{ $locked ? 'disabled' : '' }}>
+                            </div>
+                        </div>
+
+                        {{-- Detalle --}}
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Detalle (texto enriquecido)</label>
+                            <link rel="stylesheet" href="https://unpkg.com/trix@2.0.4/dist/trix.css">
+                            <script src="https://unpkg.com/trix@2.0.4/dist/trix.umd.min.js"></script>
+                            <input id="about" type="hidden" name="about"
+                                   value="{{ old('about', $profile->about) }}"
+                                   {{ $locked ? 'disabled' : '' }}>
+                            <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                                <trix-editor input="about" class="trix-content text-sm" {{ $locked ? 'contenteditable=false' : '' }}></trix-editor>
+                            </div>
+                            @if($locked)
+                                <p class="text-[11px] text-gray-500 mt-1">Bloqueado por solicitud pendiente.</p>
+                            @endif
+                        </div>
+                    </section>
+
+                    {{-- BLOQUE: Medios y template --}}
+                    <section class="space-y-4">
+                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                            Imagen y formato
+                        </h3>
+
+                        <div class="grid gap-5 md:grid-cols-2">
+                            {{-- Foto --}}
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Foto</label>
+                                <input type="file" name="photo" accept="image/*"
+                                       class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-60"
+                                       {{ $locked ? 'disabled' : '' }}>
+                                @if($profile->photo_path)
+                                    <div class="mt-2">
+                                        <img src="{{ asset('storage/'.$profile->photo_path) }}"
+                                             class="h-20 w-20 rounded-xl object-cover border border-slate-200">
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- Video --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Video (URL)</label>
+                                <input name="video_url"
+                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       placeholder="https://www.youtube.com/watch?v=..."
+                                       value="{{ old('video_url', $profile->video_url) }}"
+                                       {{ $locked ? 'disabled' : '' }}>
+                            </div>
+
+                            {{-- Template --}}
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Template</label>
+                                <select name="template_key"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                        {{ $locked ? 'disabled' : '' }}>
+                                    <option value="a" {{ old('template_key',$profile->template_key)==='a' ? 'selected' : '' }}>Template A</option>
+                                    <option value="b" {{ old('template_key',$profile->template_key)==='b' ? 'selected' : '' }}>Template B</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="pt-2 flex items-center justify-end gap-3">
+                        <button type="submit"
+                                class="inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                {{ $locked ? 'disabled' : '' }}>
+                            Enviar a aprobación
                         </button>
-                    </form>
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('dashboard.profile.save') }}" enctype="multipart/form-data" class="space-y-5">
-                @csrf
-
-                {{-- Nombre público --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Nombre público</label>
-                    <input name="display_name" class="border p-2 rounded w-full"
-                           value="{{ old('display_name', $profile->display_name) }}" {{ $locked ? 'disabled' : '' }}>
-                </div>
-
-                {{-- Especialidad (usa services como lista desplegable) --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Especialidad</label>
-                    <select name="service_id" class="border p-2 rounded w-full" {{ $locked ? 'disabled' : '' }}>
-                        <option value="">-- Seleccionar --</option>
-                        @foreach(($services ?? collect()) as $s)
-                            <option value="{{ $s->id }}"
-                                {{ (string)old('service_id', $profile->service_id) === (string)$s->id ? 'selected' : '' }}>
-                                {{ $s->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @if(isset($services) && $services->isEmpty())
-                        <p class="text-xs text-gray-500 mt-1">No hay servicios cargados.</p>
-                    @endif
-                </div>
-
-                {{-- Modalidad --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Modalidad</label>
-                    @php
-                        $currentMod = ($profile->mode_remote && $profile->mode_presential) ? 'ambas'
-                            : ($profile->mode_remote ? 'remoto' : 'presencial');
-                    @endphp
-                    <select name="modality" class="border p-2 rounded w-full" {{ $locked ? 'disabled' : '' }}>
-                        <option value="remoto" {{ old('modality',$currentMod)==='remoto' ? 'selected' : '' }}>Remoto</option>
-                        <option value="ambas" {{ old('modality',$currentMod)==='ambas' ? 'selected' : '' }}>Remoto y presencial</option>
-                        <option value="presencial" {{ old('modality',$currentMod)==='presencial' ? 'selected' : '' }}>Presencial</option>
-                    </select>
-                </div>
-
-                {{-- UBICACIÓN: un único campo con autocompletado + mapeo a country/state/city/address + lat/lng --}}
-                <style>
-                    .ac-wrap{position:relative}
-                    .ac-list{position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;box-shadow:0 8px 16px rgba(0,0,0,.08);max-height:16rem;overflow:auto}
-                    .ac-item{padding:.5rem .75rem;cursor:pointer}
-                    .ac-item:hover{background:#f9fafb}
-                </style>
-
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium">Ubicación</label>
-                    <div class="ac-wrap">
-                        <div class="flex gap-2">
-                            <input id="loc_input" class="border p-2 rounded w-full" autocomplete="off"
-                                   placeholder="Ciudad, provincia o dirección…" {{ $locked ? 'disabled' : '' }}>
-                            <button type="button" id="btn_myloc"
-                                    class="border rounded px-3 text-sm"
-                                    {{ $locked ? 'disabled' : '' }}>Mi ubicación</button>
-                        </div>
-                        <div id="loc_list" class="ac-list hidden"></div>
                     </div>
-                    <div class="text-xs text-gray-500" id="coords_hint" style="display:none"></div>
-
-                    {{-- Hidden: coordenadas que se guardarán en profiles --}}
-                    <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
-                    <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
-                </div>
-
-                {{-- Campos que seguimos enviando (rellenos por el autocompletado) --}}
-                <div class="hidden md:grid-cols-3 gap-4 mt-3">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">País (ISO-2)</label>
-                        <input name="country" id="country" class="border p-2 rounded w-full"
-                               value="{{ old('country',$profile->country) }}" readonly>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Provincia/Estado</label>
-                        <input name="state" id="state" class="border p-2 rounded w-full"
-                               value="{{ old('state',$profile->state) }}" readonly>
-                    </div>
-                    <div>
-                        <label class="hidden text-sm font-medium mb-1">Ciudad</label>
-                        <input name="city" id="city" class="border p-2 rounded w-full"
-                               value="{{ old('city',$profile->city) }}" readonly>
-                    </div>
-                </div>
-
-                <div class="hidden">
-                    <label class="hidden text-sm font-medium mb-1">Dirección</label>
-                    <input name="address" id="address" class="border p-2 rounded w-full"
-                           value="{{ old('address',$profile->address) }}" readonly>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Coordenadas:
-                        <span id="latlngText">{{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}</span>
-                    </p>
-                </div>
-
-                {{-- WhatsApp + Email --}}
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">WhatsApp</label>
-                        <input name="whatsapp" class="border p-2 rounded w-full"
-                               placeholder="+54 9 11 5555-5555"
-                               value="{{ old('whatsapp', $profile->whatsapp) }}" {{ $locked ? 'disabled' : '' }}>
-                        <p class="text-xs text-gray-500 mt-1">Ingresá tu número con código de país (puede llevar +, espacios o guiones).</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Correo</label>
-                        <input name="contact_email" type="email" class="border p-2 rounded w-full"
-                               placeholder="tucorreo@dominio.com"
-                               value="{{ old('contact_email', $profile->contact_email) }}" {{ $locked ? 'disabled' : '' }}>
-                    </div>
-                </div>
-
-                {{-- Detalle (rich text) --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Detalle (texto enriquecido)</label>
-                    <link rel="stylesheet" href="https://unpkg.com/trix@2.0.4/dist/trix.css">
-                    <script src="https://unpkg.com/trix@2.0.4/dist/trix.umd.min.js"></script>
-                    <input id="about" type="hidden" name="about" value="{{ old('about', $profile->about) }}" {{ $locked ? 'disabled' : '' }}>
-                    <trix-editor input="about" class="trix-content" {{ $locked ? 'contenteditable=false' : '' }}></trix-editor>
-                    @if($locked)
-                        <p class="text-xs text-gray-500 mt-1">Bloqueado por solicitud pendiente.</p>
-                    @endif
-                </div>
-
-                {{-- Foto --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Foto</label>
-                    <input type="file" name="photo" accept="image/*" {{ $locked ? 'disabled' : '' }}>
-                    @if($profile->photo_path)
-                        <div class="mt-2">
-                            <img src="{{ asset('storage/'.$profile->photo_path) }}" class="h-20 rounded">
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Video --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Video (URL)</label>
-                    <input name="video_url" class="border p-2 rounded w-full"
-                           placeholder="https://www.youtube.com/watch?v=..."
-                           value="{{ old('video_url', $profile->video_url) }}" {{ $locked ? 'disabled' : '' }}>
-                </div>
-
-                {{-- Template --}}
-                <div>
-                    <label class="block text-sm font-medium mb-1">Template</label>
-                    <select name="template_key" class="border p-2 rounded w-full" {{ $locked ? 'disabled' : '' }}>
-                        <option value="a" {{ old('template_key',$profile->template_key)==='a' ? 'selected' : '' }}>Template A</option>
-                        <option value="b" {{ old('template_key',$profile->template_key)==='b' ? 'selected' : '' }}>Template B</option>
-                    </select>
-                </div>
-
-                <div class="pt-3">
-                    <button class="bg-black text-white px-4 py-2 rounded {{ $locked ? 'opacity-50 cursor-not-allowed' : '' }}"
-                            {{ $locked ? 'disabled' : '' }}>
-                        Enviar a aprobación
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -223,7 +380,6 @@
       const hint = $('#coords_hint');
       const latlngTxt = $('#latlngText');
 
-      // Debounce
       let t=null; const debounce=(fn,ms=250)=>{ clearTimeout(t); t=setTimeout(fn,ms); };
 
       function setLatLng(lat,lng){
@@ -255,10 +411,8 @@
       }
 
       function choose(item){
-        // Lat/Lng
         setLatLng(item.lat, item.lon);
 
-        // Address parts
         const a = item.address || {};
         const city = a.city || a.town || a.village || a.hamlet || '';
         const state = a.state || '';
@@ -272,14 +426,12 @@
         cityEl.value    = city;
         addrEl.value    = fullAddr;
 
-        // Mostrar legible
         const label = [city, state].filter(Boolean).join(', ') || fullAddr || item.display_name;
         locInput.value = label;
 
         list.classList.add('hidden'); list.innerHTML='';
       }
 
-      // Listeners
       locInput.addEventListener('input', () => debounce(() => search(locInput.value.trim()), 300));
       document.addEventListener('click', (e) => {
         if(e.target.closest('#loc_list .ac-item')){
@@ -290,7 +442,6 @@
         }
       });
 
-      // Mi ubicación (reverse geocoding)
       myBtn.addEventListener('click', () => {
         if(!navigator.geolocation){ alert('Tu navegador no permite geolocalización.'); return; }
         navigator.geolocation.getCurrentPosition(async pos=>{
@@ -304,11 +455,134 @@
         }, ()=>alert('No pudimos obtener tu ubicación.'));
       });
 
-      // Si ya hay datos previos, mostrarlos
       if(latEl.value && lngEl.value){
         hint.style.display='block';
         hint.textContent=`Coordenadas: ${latEl.value}, ${lngEl.value}`;
       }
+    })();
+    </script>
+
+    {{-- Widget de especialidades: buscador + chips --}}
+    <script>
+    (function() {
+        const widget = document.getElementById('specialty-widget');
+        if (!widget) return;
+
+        const locked = widget.dataset.locked === '1';
+        if (locked) return;
+
+        const specialties   = JSON.parse(widget.dataset.specialties || '[]');
+        const input         = document.getElementById('specialty-search');
+        const results       = document.getElementById('specialty-results');
+        const selectedWrap  = document.getElementById('specialty-selected');
+
+        if (!input || !results || !selectedWrap) return;
+
+        let currentQuery = '';
+
+        function getSelectedIds() {
+            return Array.from(
+                selectedWrap.querySelectorAll('input[name="specialties[]"]')
+            ).map(el => parseInt(el.value, 10));
+        }
+
+        function addSpecialty(id, name) {
+            const current = getSelectedIds();
+            if (current.includes(id)) return;
+
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center px-2.5 py-1 bg-indigo-50 text-indigo-800 text-xs rounded-full specialty-chip';
+            chip.dataset.id = id;
+            chip.innerHTML = `
+                ${name}
+                <button type="button"
+                        class="ml-1 text-indigo-700 hover:text-indigo-900 text-xs specialty-chip-remove"
+                        aria-label="Quitar">×</button>
+            `;
+            selectedWrap.appendChild(chip);
+
+            const hidden = document.createElement('input');
+            hidden.type  = 'hidden';
+            hidden.name  = 'specialties[]';
+            hidden.value = id;
+            selectedWrap.appendChild(hidden);
+        }
+
+        function removeSpecialty(id) {
+            Array.from(selectedWrap.querySelectorAll('.specialty-chip')).forEach(chip => {
+                if (parseInt(chip.dataset.id, 10) === id) chip.remove();
+            });
+            Array.from(selectedWrap.querySelectorAll('input[name="specialties[]"]')).forEach(inp => {
+                if (parseInt(inp.value, 10) === id) inp.remove();
+            });
+        }
+
+        function renderResults(list) {
+            if (!list.length) {
+                results.classList.add('hidden');
+                results.innerHTML = '';
+                return;
+            }
+
+            results.innerHTML = list.map(s => `
+                <button type="button"
+                        class="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 specialty-result-item"
+                        data-id="${s.id}"
+                        data-name="${s.name}">
+                    ${s.name}
+                </button>
+            `).join('');
+
+            results.classList.remove('hidden');
+        }
+
+        function refreshResults() {
+            const q = currentQuery.trim();
+            if (!q) {
+                results.classList.add('hidden');
+                results.innerHTML = '';
+                return;
+            }
+
+            const qLower   = q.toLowerCase();
+            const selected = getSelectedIds();
+            const filtered = specialties.filter(s =>
+                s.name.toLowerCase().includes(qLower) &&
+                !selected.includes(s.id)
+            );
+
+            renderResults(filtered);
+        }
+
+        let t = null;
+        input.addEventListener('input', function () {
+            currentQuery = this.value;
+            clearTimeout(t);
+            t = setTimeout(refreshResults, 150);
+        });
+
+        results.addEventListener('click', function (e) {
+            const btn = e.target.closest('.specialty-result-item');
+            if (!btn) return;
+
+            const id   = parseInt(btn.dataset.id, 10);
+            const name = btn.dataset.name;
+
+            addSpecialty(id, name);
+            refreshResults();
+        });
+
+        selectedWrap.addEventListener('click', function (e) {
+            const btn = e.target.closest('.specialty-chip-remove');
+            if (!btn) return;
+
+            const chip = btn.closest('.specialty-chip');
+            if (!chip) return;
+
+            const id = parseInt(chip.dataset.id, 10);
+            removeSpecialty(id);
+            refreshResults();
+        });
     })();
     </script>
 </x-app-layout>

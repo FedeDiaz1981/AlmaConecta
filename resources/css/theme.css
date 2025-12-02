@@ -1,0 +1,47 @@
+/* resources/css/theme.css */
+
+:root {
+  /* Blues */
+  --ac-blue-deep: #0A1224;
+  --ac-blue-ink: #0E1A33;
+  --ac-blue-night: #101F3F;
+  --ac-blue-mid: #153567;
+  --ac-blue-bright: #1D4A8C;
+
+  /* Golds */
+  --ac-gold: #CBA043;
+  --ac-gold-light: #E5C67F;
+  --ac-gold-strong: #B8892C;
+  --ac-gold-dark: #8C6C2A;
+  --ac-amber-deep: #9E6B1F;
+
+  /* Neutrals */
+  --ac-silver: #D6D6D6;
+  --ac-silver-light: #E3E3E3;
+  --ac-gray-mid: #A7A7A7;
+  --ac-gray-dark: #7A7A7A;
+  --ac-carbon: #333333;
+
+  /* Accent */
+  --ac-accent-mint: #1F8A70;
+
+  /* Typography */
+  --font-sans: "Inter", "Helvetica", "Arial", sans-serif;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 6px rgba(0,0,0,0.15);
+  --shadow-strong: 0 4px 12px rgba(0,0,0,0.2);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
