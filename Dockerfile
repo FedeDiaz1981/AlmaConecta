@@ -17,9 +17,9 @@ RUN npm run build
 
 
 # ============================================
-#  VENDOR — Composer sin scripts
+#  VENDOR — Composer sin scripts (PHP 8.3)
 # ============================================
-FROM composer:2 AS vendor
+FROM composer:2-php8.3 AS vendor   # <-- ACÁ EL CAMBIO IMPORTANTE
 
 WORKDIR /app
 COPY composer.json composer.lock ./
@@ -37,7 +37,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 WORKDIR /var/www/html
 
 # --------------------------------------------
-# Instalar extensiones necesarias + configurar Apache
+# Extensiones y Apache
 # --------------------------------------------
 RUN apt-get update && apt-get install -y \
       git unzip libpq-dev libzip-dev \
@@ -48,26 +48,26 @@ RUN apt-get update && apt-get install -y \
     && sed -ri 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/*.conf \
     && sed -ri 's|/var/www/|/var/www/html/public/|g' /etc/apache2/apache2.conf \
     \
-    # Permitir .htaccess (rutas bonitas de Laravel)
-    && sed -ri 's/AllowOverride[[:space:]]+None/AllowOverride All/g' /etc/apache2/apache2.conf \
+    # Permitir .htaccess
+    && sed- ri 's/AllowOverride[[:space:]]+None/AllowOverride All/g' /etc/apache2/apache2.conf \
     \
-    # Añadir ServerName y permisos
+    # ServerName + permisos
     && printf "\nServerName localhost\n<Directory /var/www/html/public>\n    AllowOverride All\n    Require all granted\n</Directory>\n" \
        >> /etc/apache2/apache2.conf
 
 # --------------------------------------------
-# Copiar código de la app
+# Código de la app
 # --------------------------------------------
 COPY . .
 
-# Copiar vendor ya instalado por Composer
+# Vendor desde el stage vendor
 COPY --from=vendor /app/vendor /var/www/html/vendor
 
-# Copiar build de Vite
+# Assets generados por Vite
 COPY --from=frontend /app/public/build /var/www/html/public/build
 
 # --------------------------------------------
-# Permisos de Laravel
+# Permisos Laravel
 # --------------------------------------------
 RUN set -eux; \
     mkdir -p \
@@ -81,7 +81,7 @@ RUN set -eux; \
     chmod -R 775 storage bootstrap/cache
 
 # --------------------------------------------
-# Artisan (no rompe si falta .env)
+# Comandos artisan (no rompen si falta .env)
 # --------------------------------------------
 RUN php artisan package:discover --ansi || true \
  && php artisan config:clear        || true \
