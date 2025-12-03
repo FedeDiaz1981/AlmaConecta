@@ -21,7 +21,7 @@
 
     {{-- CONTENIDO --}}
     <div class="relative max-w-8xl mx-auto md:ml-[5%] px-6 w-full pt-20 md:pt-32 pb-12">
-        <div class="w-full md:max-w-4xl mx-auto md:mx-0 text-center md:text-left">
+        <div class="w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
 
             <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
                 Encontrá tu espacio de <span class="text-gold">bienestar holístico</span>
@@ -34,11 +34,11 @@
             {{-- Buscador principal --}}
             <form method="GET" action="{{ route('search') }}"
                   class="bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
-                         mx-auto md:mx-0">
+                         mx-auto md:mx-0 md:max-w-xl">
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="flex flex-col gap-4">
                     {{-- q: especialidad (solo opciones existentes) --}}
-                    <div class="flex flex-col md:col-span-2 relative">
+                    <div class="flex flex-col relative ">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Qué estás buscando?
                         </label>
@@ -61,38 +61,49 @@
                             </button>
                         </div>
 
-                        {{-- id de la especialidad seleccionada --}}
-                        <input type="hidden"
-                               name="specialty_id"
-                               id="specialty_id"
-                               value="{{ request('specialty_id') }}">
+                        <input type="hidden" name="specialty_id" id="specialty_id" value="{{ request('specialty_id') }}">
 
-                        {{-- Contenedor de sugerencias --}}
                         <div id="q-suggestions"
                              class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
                                     max-h-56 overflow-auto text-sm hidden z-20">
-                            {{-- se completa por JS --}}
                         </div>
                     </div>
 
                     {{-- loc: ubicación --}}
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Dónde?
                         </label>
-                        <input type="text"
-                               name="loc"
-                               id="loc"
-                               placeholder="Ciudad o barrio"
-                               value="{{ request('loc') }}"
-                               class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
-                                      px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+
+                        <div class="relative">
+                            <input type="text"
+                                   name="loc"
+                                   id="loc"
+                                   autocomplete="off"
+                                   placeholder="Ciudad o barrio"
+                                   value="{{ request('loc') }}"
+                                   class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
+                                          px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+
+                            {{-- Botón limpiar ubicación --}}
+                            <button type="button"
+                                    id="loc-clear"
+                                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
+                                ✕
+                            </button>
+                        </div>
+
                         <input type="hidden" id="lat" name="lat" value="{{ request('lat') }}">
                         <input type="hidden" id="lng" name="lng" value="{{ request('lng') }}">
+
+                        <div id="loc-suggestions"
+                             class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
+                                    max-h-56 overflow-auto text-sm hidden z-20">
+                        </div>
                     </div>
 
-                    {{-- radio + modalidad + botón --}}
-                    <div class="flex flex-col justify-end gap-2">
+                    {{-- área + modalidad + botón --}}
+                    <div class="flex flex-col gap-2">
                         <div class="flex flex-col">
                             <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                                 Área de búsqueda
@@ -118,15 +129,16 @@
                         </label>
 
                         <button type="submit"
-                                class="w-full px-6 py-2.5 rounded-xl bg-gold text-blueDeep text-sm font-semibold
+                                class="w-[50%] px-6 py-2.5 mx-auto rounded-xl bg-gold text-blueDeep text-sm font-semibold
                                        shadow-soft hover:bg-goldStrong transition">
                             Buscar
                         </button>
                     </div>
                 </div>
+
             </form>
 
-            <p class="mt-4 text-[11px] text-silver/60">
+            <p class="mt-4 text-[16px] text-silver/60">
                 Tip: podés buscar directamente por especialidad.
             </p>
         </div>
@@ -138,13 +150,12 @@
 {{-- ============================= --}}
 {{-- BLOQUE APP / BENEFICIOS (equivalente a “publicidad”) --}}
 {{-- ============================= --}}
-<section class="bg-blueNight py-12 md:py-16">
+<section class="bg-blueNight py-12 md:py-16 hidden">
     <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
 
-        {{-- Imagen / mockup app (podés reemplazar por tu imagen real) --}}
+        {{-- Imagen / mockup app --}}
         <div class="flex justify-center md:justify-start">
             <div class="relative h-72 w-40 rounded-3xl bg-gradient-to-br from-blueMid to-blueDeep shadow-strong flex items-center justify-center">
-                {{-- Acá podrías poner un <img> con tu mockup --}}
                 <span class="text-[11px] text-silver/70 px-4 text-center">
                     Aquí va el mockup de la app / sitio de Alma Conecta
                 </span>
@@ -263,136 +274,262 @@
     </div>
 </section>
 
+{{-- ============================= --}}
+{{-- JS: Autocomplete especialidad + ubicación --}}
+{{-- ============================= --}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        /* =======================
+         *  AUTOCOMPLETE ESPECIALIDAD
+         * ======================= */
         const input      = document.getElementById('q');
         const hidId      = document.getElementById('specialty_id');
         const box        = document.getElementById('q-suggestions');
         const clearBtn   = document.getElementById('q-clear');
         const form       = input ? input.form : null;
 
-        if (!input || !hidId || !box || !form) return;
+        if (input && hidId && box && form) {
+            let timeoutId = null;
 
-        let timeoutId = null;
-        let lastItems = [];
+            const hideBox = () => {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+            };
 
-        const hideBox = () => {
-            box.classList.add('hidden');
-            box.innerHTML = '';
-        };
+            const lockInput = () => {
+                input.readOnly = true;
+                input.classList.add('cursor-default');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            };
 
-        const lockInput = () => {
-            input.readOnly = true;
-            input.classList.add('cursor-default');
-            if (clearBtn) clearBtn.classList.remove('hidden');
-        };
+            const unlockInput = () => {
+                input.readOnly = false;
+                input.value = '';
+                hidId.value = '';
+                input.classList.remove('cursor-default');
+                if (clearBtn) clearBtn.classList.add('hidden');
+            };
 
-        const unlockInput = () => {
-            input.readOnly = false;
-            input.value = '';
-            hidId.value = '';
-            input.classList.remove('cursor-default');
-            if (clearBtn) clearBtn.classList.add('hidden');
-        };
-
-        const showSuggestions = (items) => {
-            lastItems = items;
-            if (!items.length) {
-                hideBox();
-                return;
-            }
-
-            box.innerHTML = '';
-            items.forEach(item => {
-                const option = document.createElement('button');
-                option.type = 'button';
-                option.textContent = item.name;
-                option.className =
-                    'w-full text-left px-3 py-2 hover:bg-blueMid/60 text-silver text-sm';
-                option.addEventListener('click', () => {
-                    input.value = item.name;
-                    hidId.value = item.id;          // guardamos id válido
+            const showSuggestions = (items) => {
+                if (!items.length) {
                     hideBox();
-                    lockInput();
-                });
-                box.appendChild(option);
-            });
-
-            box.classList.remove('hidden');
-        };
-
-        const fetchSuggestions = async (term) => {
-            if (term.length < 2 || input.readOnly) {
-                hideBox();
-                return;
-            }
-
-            try {
-                const url = "{{ route('specialties.suggest') }}?q=" + encodeURIComponent(term);
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                if (!res.ok) return;
-                const data = await res.json();
-                showSuggestions(data);
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        // Si ya viene una especialidad seleccionada (por querystring), bloquear
-        if (hidId.value && input.value.trim() !== '') {
-            lockInput();
-        }
-
-        // Cada vez que escribe, invalidamos el id hasta que elija una opción
-        input.addEventListener('input', () => {
-            if (input.readOnly) return;
-            const term = input.value.trim();
-            hidId.value = '';          // texto cambió → no hay selección válida
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => fetchSuggestions(term), 250);
-        });
-
-        // Al salir del campo: si no hay selección válida, limpiar texto
-        input.addEventListener('blur', () => {
-            setTimeout(() => {
-                hideBox();
-                if (!hidId.value) {
-                    input.value = '';
+                    return;
                 }
-            }, 150);
-        });
 
-        // Mostrar sugerencias al enfocar si ya hay texto y no está bloqueado
-        input.addEventListener('focus', () => {
-            if (input.readOnly) return;
-            const term = input.value.trim();
-            if (term.length >= 2 && !hidId.value) {
-                fetchSuggestions(term);
+                box.innerHTML = '';
+                items.forEach(item => {
+                    const option = document.createElement('button');
+                    option.type = 'button';
+                    option.textContent = item.name;
+                    option.className =
+                        'w-full text-left px-3 py-2 hover:bg-blueMid/60 text-silver text-sm';
+                    option.addEventListener('click', () => {
+                        input.value = item.name;
+                        hidId.value = item.id;
+                        hideBox();
+                        lockInput();
+                    });
+                    box.appendChild(option);
+                });
+
+                box.classList.remove('hidden');
+            };
+
+            const fetchSuggestions = async (term) => {
+                if (term.length < 2 || input.readOnly) {
+                    hideBox();
+                    return;
+                }
+                try {
+                    const url = "{{ route('specialties.suggest') }}?q=" + encodeURIComponent(term);
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    showSuggestions(Array.isArray(data) ? data : []);
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            // Si ya viene una especialidad seleccionada, bloquear
+            if (hidId.value && input.value.trim() !== '') {
+                lockInput();
             }
-        });
 
-        // Botón limpiar: desbloquea y permite elegir otra opción
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                unlockInput();
-                input.focus();
+            input.addEventListener('input', () => {
+                if (input.readOnly) return;
+                const term = input.value.trim();
+                hidId.value = '';
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fetchSuggestions(term), 250);
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => {
+                    hideBox();
+                    if (!hidId.value) {
+                        input.value = '';
+                    }
+                }, 150);
+            });
+
+            input.addEventListener('focus', () => {
+                if (input.readOnly) return;
+                const term = input.value.trim();
+                if (term.length >= 2 && !hidId.value) {
+                    fetchSuggestions(term);
+                }
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    unlockInput();
+                    input.focus();
+                });
+            }
+
+            form.addEventListener('submit', (e) => {
+                const term = input.value.trim();
+                if (term === '') return; // búsqueda sólo por ubicación / modalidad
+                if (!hidId.value) {
+                    e.preventDefault();
+                    alert('Seleccioná una especialidad de la lista. No se pueden agregar opciones nuevas.');
+                }
             });
         }
 
-        // Validar al enviar: si hay texto pero no specialty_id, no dejamos
-        form.addEventListener('submit', (e) => {
-            const term = input.value.trim();
+        /* =======================
+         *  AUTOCOMPLETE UBICACIÓN (NOMINATIM)
+         * ======================= */
+        const locInput = document.getElementById('loc');
+        const latEl    = document.getElementById('lat');
+        const lngEl    = document.getElementById('lng');
+        const locBox   = document.getElementById('loc-suggestions');
+        const locClear = document.getElementById('loc-clear');
 
-            // Permitir búsqueda sin especialidad (por ubicación, etc)
-            if (term === '') {
-                return;
+        if (locInput && latEl && lngEl && locBox) {
+            let locTimeout = null;
+
+            const hideLocBox = () => {
+                locBox.classList.add('hidden');
+                locBox.innerHTML = '';
+            };
+
+            const lockLocInput = () => {
+                locInput.readOnly = true;
+                locInput.classList.add('cursor-default');
+                if (locClear) locClear.classList.remove('hidden');
+            };
+
+            const unlockLocInput = () => {
+                locInput.readOnly = false;
+                locInput.value = '';
+                latEl.value = '';
+                lngEl.value = '';
+                locInput.classList.remove('cursor-default');
+                if (locClear) locClear.classList.add('hidden');
+            };
+
+            const showLocSuggestions = (items) => {
+                if (!items.length) {
+                    hideLocBox();
+                    return;
+                }
+
+                locBox.innerHTML = '';
+                items.forEach(i => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className =
+                        'w-full text-left px-3 py-2 hover:bg-blueMid/60 text-silver text-sm';
+                    btn.dataset.lat = i.lat;
+                    btn.dataset.lng = i.lon;
+                    btn.textContent = i.display_name;
+
+                    btn.addEventListener('click', () => {
+                        locInput.value = i.display_name;
+                        latEl.value    = i.lat;
+                        lngEl.value    = i.lon;
+                        hideLocBox();
+                        lockLocInput();
+                    });
+
+                    locBox.appendChild(btn);
+                });
+
+                locBox.classList.remove('hidden');
+            };
+
+            const fetchLocSuggestions = async (q) => {
+                latEl.value = '';
+                lngEl.value = '';
+                if (q.length < 3 || locInput.readOnly) {
+                    showLocSuggestions([]);
+                    return;
+                }
+
+                try {
+                    const url = new URL('https://nominatim.openstreetmap.org/search');
+                    url.searchParams.set('q', q);
+                    url.searchParams.set('format', 'json');
+                    url.searchParams.set('limit', '6');
+                    url.searchParams.set('accept-language', 'es');
+                    url.searchParams.set('countrycodes', 'ar'); // limitado a Argentina
+
+                    const res = await fetch(url.toString(), {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (!res.ok) {
+                        showLocSuggestions([]);
+                        return;
+                    }
+                    const data = await res.json();
+                    showLocSuggestions(Array.isArray(data) ? data : []);
+                } catch (e) {
+                    console.error(e);
+                    showLocSuggestions([]);
+                }
+            };
+
+            // Si ya hay una ubicación seleccionada (loc + lat + lng), bloquear
+            if (locInput.value.trim() !== '' && latEl.value && lngEl.value) {
+                lockLocInput();
             }
 
-            if (!hidId.value) {
-                e.preventDefault();
-                alert('Seleccioná una especialidad de la lista. No se pueden agregar opciones nuevas.');
+            locInput.addEventListener('input', () => {
+                if (locInput.readOnly) return;
+                const q = locInput.value.trim();
+                latEl.value = '';
+                lngEl.value = '';
+                clearTimeout(locTimeout);
+                locTimeout = setTimeout(() => fetchLocSuggestions(q), 350);
+            });
+
+            locInput.addEventListener('focus', () => {
+                if (locInput.readOnly) return;
+                const q = locInput.value.trim();
+                if (q.length >= 3 && !latEl.value && !lngEl.value) {
+                    fetchLocSuggestions(q);
+                }
+            });
+
+            locInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    hideLocBox();
+                    // Si no se eligió una sugerencia válida, limpiar todo
+                    if (!latEl.value || !lngEl.value) {
+                        locInput.value = '';
+                    }
+                }, 150);
+            });
+
+            if (locClear) {
+                locClear.addEventListener('click', () => {
+                    unlockLocInput();
+                    locInput.focus();
+                });
             }
-        });
+        }
     });
 </script>
 
