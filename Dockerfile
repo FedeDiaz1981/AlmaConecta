@@ -17,9 +17,9 @@ RUN npm run build
 
 
 # ============================================
-#  VENDOR — Composer sin scripts (PHP 8.3)
+#  VENDOR — Composer sin scripts (usa composer:2)
 # ============================================
-FROM composer:2-php8.3 AS vendor   # <-- ACÁ EL CAMBIO IMPORTANTE
+FROM composer:2 AS vendor
 
 WORKDIR /app
 COPY composer.json composer.lock ./
@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y \
     && sed -ri 's|/var/www/|/var/www/html/public/|g' /etc/apache2/apache2.conf \
     \
     # Permitir .htaccess
-    && sed- ri 's/AllowOverride[[:space:]]+None/AllowOverride All/g' /etc/apache2/apache2.conf \
+    && sed -ri 's/AllowOverride[[:space:]]+None/AllowOverride All/g' /etc/apache2/apache2.conf \
     \
     # ServerName + permisos
     && printf "\nServerName localhost\n<Directory /var/www/html/public>\n    AllowOverride All\n    Require all granted\n</Directory>\n" \
