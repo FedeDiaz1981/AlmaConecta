@@ -20,7 +20,7 @@
     </div>
 
     {{-- CONTENIDO --}}
-    <div class="relative max-w-8xl mx-auto md:ml-[5%] px-6 w-full pt-20 md:pt-32 pb-12">
+    <div class="relative max-w-8xl mx-auto md:ml-[3%] px-6 w-full pt-20 md:pt-32 pb-12">
         <div class="w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
 
             <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
@@ -40,7 +40,7 @@
                     {{-- q: especialidad (solo opciones existentes) --}}
                     <div class="flex flex-col relative ">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                            ¿Qué estás buscando?
+                            ¿Qué estás buscando? <span class="text-red-400">*</span>
                         </label>
 
                         <div class="relative">
@@ -48,6 +48,7 @@
                                    name="q"
                                    id="q"
                                    autocomplete="off"
+                                   required
                                    placeholder="Reiki, Yoga, Constelaciones..."
                                    value="{{ request('q') }}"
                                    class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
@@ -72,7 +73,7 @@
                     {{-- loc: ubicación --}}
                     <div class="flex flex-col relative">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                            ¿Dónde?
+                            ¿Dónde? <span class="text-red-400">*</span>
                         </label>
 
                         <div class="relative">
@@ -80,6 +81,7 @@
                                    name="loc"
                                    id="loc"
                                    autocomplete="off"
+                                   required
                                    placeholder="Ciudad o barrio"
                                    value="{{ request('loc') }}"
                                    class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
@@ -125,12 +127,15 @@
                                    value="1"
                                    class="rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
                                    {{ request()->boolean('remote', true) ? 'checked' : '' }}>
-                            <span>Incluir modalidad online/remota</span>
+                            <span class="text-[18px]">Incluir modalidad online/remota</span>
                         </label>
 
                         <button type="submit"
+                                id="search-btn"
+                                disabled
                                 class="w-[50%] px-6 py-2.5 mx-auto rounded-xl bg-gold text-blueDeep text-sm font-semibold
-                                       shadow-soft hover:bg-goldStrong transition">
+                                       shadow-soft hover:bg-goldStrong transition
+                                       disabled:opacity-50 disabled:cursor-not-allowed">
                             Buscar
                         </button>
                     </div>
@@ -150,47 +155,48 @@
 {{-- ============================= --}}
 {{-- BLOQUE APP / BENEFICIOS (equivalente a “publicidad”) --}}
 {{-- ============================= --}}
-<section class="bg-blueNight py-12 md:py-16 hidden">
-    <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+<section class="bg-blueNight py-12 md:py-16">
+    <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
 
         {{-- Imagen / mockup app --}}
         <div class="flex justify-center md:justify-start">
-            <div class="relative h-72 w-40 rounded-3xl bg-gradient-to-br from-blueMid to-blueDeep shadow-strong flex items-center justify-center">
-                <span class="text-[11px] text-silver/70 px-4 text-center">
+            <!--<div class="relative h-72 w-40 rounded-3xl bg-gradient-to-br from-blueMid to-blueDeep shadow-strong flex items-center justify-center">
+                 <span class="text-[11px] text-silver/70 px-4 text-center">
                     Aquí va el mockup de la app / sitio de Alma Conecta
-                </span>
-            </div>
+                </span> 
+                
+            </div>-->
+            <h2 class="text-4xl font-semibold text-silver mb-3">
+                Si sos un un <span class="text-gold text-5xl">profesional</span>  y querés <span class="text-gold text-5xl">cargar</span> tu perfil hacé click <span class="text-gold text-5xl">acá</span>.
+            </h2>
         </div>
 
         {{-- Texto --}}
         <div>
-            <h2 class="text-2xl font-semibold text-silver mb-3">
-                Bienestar a un clic de distancia
+            <!--<h2 class="text-2xl font-semibold text-silver mb-3">
+                Si sos un un profesional y querés cargar tu perfil hacé click acá.
             </h2>
-            <p class="text-sm text-silver/80 mb-4">
-                Explorá prácticas, filtrá por ubicación y modalidad, y conectá con el espacio que mejor resuene con vos.
+             <p class="text-sm text-silver/80 mb-4">
+                Si sos un un profesional y querés cargar tu perfil hacé click acá.
             </p>
 
             <ul class="space-y-2 text-sm text-silver/85 mb-6">
                 <li>• Búsqueda por especialidad y ubicación.</li>
                 <li>• Perfiles verificados y moderados.</li>
                 <li>• Modalidad presencial y remota.</li>
-            </ul>
+            </ul> -->
 
-            {{-- CTA doble --}}
+            {{-- CTA única --}}
             <div class="flex flex-wrap gap-3">
-                <a href="{{ route('search') }}"
-                   class="px-5 py-2.5 rounded-full bg-gold text-blueDeep text-sm font-semibold shadow-soft hover:bg-goldStrong transition">
-                    Explorar espacios
-                </a>
                 <a href="{{ route('dashboard.profile.edit') }}"
-                   class="px-5 py-2.5 rounded-full border border-gold text-gold text-sm font-semibold hover:bg-gold/10 transition">
-                    Soy facilitador/a
+                   class="px-5 py-2.5 rounded-full border border-gold text-gold text-2xl font-semibold hover:bg-gold/10 transition mx-auto">
+                    Registrarme
                 </a>
             </div>
         </div>
     </div>
 </section>
+
 
 {{-- ============================= --}}
 {{-- PRÁCTICAS MÁS BUSCADAS        --}}
@@ -275,10 +281,28 @@
 </section>
 
 {{-- ============================= --}}
-{{-- JS: Autocomplete especialidad + ubicación --}}
+{{-- JS: Autocomplete especialidad + ubicación + validación --}}
 {{-- ============================= --}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const searchBtn = document.getElementById('search-btn');
+
+        const updateSearchButtonState = () => {
+            if (!searchBtn) return;
+
+            const qEl   = document.getElementById('q');
+            const qIdEl = document.getElementById('specialty_id');
+            const locEl = document.getElementById('loc');
+            const latEl = document.getElementById('lat');
+            const lngEl = document.getElementById('lng');
+
+            const qValid   = qEl && qIdEl && qEl.value.trim() !== '' && qIdEl.value;
+            const locValid = locEl && latEl && lngEl &&
+                             locEl.value.trim() !== '' && latEl.value && lngEl.value;
+
+            searchBtn.disabled = !(qValid && locValid);
+        };
+
         /* =======================
          *  AUTOCOMPLETE ESPECIALIDAD
          * ======================= */
@@ -300,6 +324,7 @@
                 input.readOnly = true;
                 input.classList.add('cursor-default');
                 if (clearBtn) clearBtn.classList.remove('hidden');
+                updateSearchButtonState();
             };
 
             const unlockInput = () => {
@@ -308,6 +333,7 @@
                 hidId.value = '';
                 input.classList.remove('cursor-default');
                 if (clearBtn) clearBtn.classList.add('hidden');
+                updateSearchButtonState();
             };
 
             const showSuggestions = (items) => {
@@ -362,6 +388,7 @@
                 hidId.value = '';
                 clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => fetchSuggestions(term), 250);
+                updateSearchButtonState();
             });
 
             input.addEventListener('blur', () => {
@@ -370,6 +397,7 @@
                     if (!hidId.value) {
                         input.value = '';
                     }
+                    updateSearchButtonState();
                 }, 150);
             });
 
@@ -389,11 +417,24 @@
             }
 
             form.addEventListener('submit', (e) => {
+                updateSearchButtonState();
+
                 const term = input.value.trim();
-                if (term === '') return; // búsqueda sólo por ubicación / modalidad
-                if (!hidId.value) {
+                if (!term || !hidId.value) {
                     e.preventDefault();
-                    alert('Seleccioná una especialidad de la lista. No se pueden agregar opciones nuevas.');
+                    alert('Seleccioná una especialidad de la lista.');
+                    return;
+                }
+
+                const locEl = document.getElementById('loc');
+                const latEl = document.getElementById('lat');
+                const lngEl = document.getElementById('lng');
+
+                if (!locEl || !latEl || !lngEl ||
+                    !locEl.value.trim() || !latEl.value || !lngEl.value) {
+                    e.preventDefault();
+                    alert('Elegí una ubicación de las sugerencias.');
+                    return;
                 }
             });
         }
@@ -419,6 +460,7 @@
                 locInput.readOnly = true;
                 locInput.classList.add('cursor-default');
                 if (locClear) locClear.classList.remove('hidden');
+                updateSearchButtonState();
             };
 
             const unlockLocInput = () => {
@@ -428,6 +470,7 @@
                 lngEl.value = '';
                 locInput.classList.remove('cursor-default');
                 if (locClear) locClear.classList.add('hidden');
+                updateSearchButtonState();
             };
 
             const showLocSuggestions = (items) => {
@@ -464,7 +507,8 @@
                 latEl.value = '';
                 lngEl.value = '';
                 if (q.length < 3 || locInput.readOnly) {
-                    showLocSuggestions([]);
+                    hideLocBox();
+                    updateSearchButtonState();
                     return;
                 }
 
@@ -480,14 +524,17 @@
                         headers: { 'Accept': 'application/json' }
                     });
                     if (!res.ok) {
-                        showLocSuggestions([]);
+                        hideLocBox();
+                        updateSearchButtonState();
                         return;
                     }
                     const data = await res.json();
                     showLocSuggestions(Array.isArray(data) ? data : []);
                 } catch (e) {
                     console.error(e);
-                    showLocSuggestions([]);
+                    hideLocBox();
+                } finally {
+                    updateSearchButtonState();
                 }
             };
 
@@ -503,6 +550,7 @@
                 lngEl.value = '';
                 clearTimeout(locTimeout);
                 locTimeout = setTimeout(() => fetchLocSuggestions(q), 350);
+                updateSearchButtonState();
             });
 
             locInput.addEventListener('focus', () => {
@@ -520,6 +568,7 @@
                     if (!latEl.value || !lngEl.value) {
                         locInput.value = '';
                     }
+                    updateSearchButtonState();
                 }, 150);
             });
 
@@ -530,6 +579,9 @@
                 });
             }
         }
+
+        // Estado inicial del botón según valores que lleguen por querystring
+        updateSearchButtonState();
     });
 </script>
 

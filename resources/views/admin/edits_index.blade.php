@@ -1,10 +1,8 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Cambios pendientes') }}
-        </h2>
-    </x-slot>
+@extends('layouts.app')
 
+@section('title', 'Cambios pendientes')
+
+@section('content')
     {{-- Bootstrap 5 solo para esta vista --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -21,8 +19,10 @@
             <div class="bg-white shadow sm:rounded-lg p-0">
                 <div class="p-4 border-bottom">
                     <div class="d-flex align-items-center gap-2">
-                        <h3 class="h5 mb-0">Aprobación de cambios</h3>
-                        <span class="badge bg-secondary">{{ $edits->total() ?? $edits->count() }} pendientes</span>
+                        <h2 class="h5 mb-0">Cambios pendientes</h2>
+                        <span class="badge bg-secondary">
+                            {{ $edits->total() ?? $edits->count() }} pendientes
+                        </span>
                     </div>
                 </div>
 
@@ -175,9 +175,15 @@
                                                 <tbody>
                                                     @foreach($changes as $key => $pair)
                                                         <tr class="table-warning">
-                                                            <td class="fw-semibold">{{ $labels[$key] ?? \Illuminate\Support\Str::headline($key) }}</td>
-                                                            <td class="text-muted">{{ ($pair['current'] === '' || $pair['current'] === null) ? '—' : $pair['current'] }}</td>
-                                                            <td class="fw-semibold">{{ ($pair['new'] === '' || $pair['new'] === null) ? '—' : $pair['new'] }}</td>
+                                                            <td class="fw-semibold">
+                                                                {{ $labels[$key] ?? \Illuminate\Support\Str::headline($key) }}
+                                                            </td>
+                                                            <td class="text-muted">
+                                                                {{ ($pair['current'] === '' || $pair['current'] === null) ? '—' : $pair['current'] }}
+                                                            </td>
+                                                            <td class="fw-semibold">
+                                                                {{ ($pair['new'] === '' || $pair['new'] === null) ? '—' : $pair['new'] }}
+                                                            </td>
                                                         </tr>
                                                     @endforeach
 
@@ -202,14 +208,18 @@
                                                             <td class="fw-semibold">{{ $labels['photo_path'] }}</td>
                                                             <td>
                                                                 @if($current['photo_path'])
-                                                                    <img src="{{ asset('storage/'.$current['photo_path']) }}" class="img-thumbnail" style="max-height:100px">
+                                                                    <img src="{{ asset('storage/'.$current['photo_path']) }}"
+                                                                         class="img-thumbnail"
+                                                                         style="max-height:100px">
                                                                 @else
                                                                     <span class="text-muted">—</span>
                                                                 @endif
                                                             </td>
                                                             <td>
                                                                 @if(!empty($payload['photo_path']))
-                                                                    <img src="{{ asset('storage/'.$payload['photo_path']) }}" class="img-thumbnail border border-success" style="max-height:100px">
+                                                                    <img src="{{ asset('storage/'.$payload['photo_path']) }}"
+                                                                         class="img-thumbnail border border-success"
+                                                                         style="max-height:100px">
                                                                 @else
                                                                     <span class="text-muted">—</span>
                                                                 @endif
@@ -232,13 +242,13 @@
 
                                         <form method="POST" action="{{ route('admin.edits.reject', $e) }}" class="d-flex align-items-center gap-2">
                                             @csrf
-                                            <input name="reason" placeholder="Motivo (opcional)" class="form-control form-control-sm" style="min-width: 220px;">
+                                            <input name="reason" placeholder="Motivo (opcional)"
+                                                   class="form-control form-control-sm" style="min-width: 220px;">
                                             <button class="btn btn-danger">
                                                 Rechazar
                                             </button>
                                         </form>
 
-                                        {{-- Si querés seguir viendo el payload crudo, dejá este toggle opcional --}}
                                         <button class="btn btn-outline-secondary btn-sm ms-auto"
                                                 type="button"
                                                 data-bs-toggle="collapse"
@@ -248,7 +258,9 @@
                                     </div>
 
                                     <div class="collapse mt-3" id="raw-{{ $e->id }}">
-                                        <pre class="bg-light p-2 small rounded border">{{ json_encode($e->payload, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) }}</pre>
+                                        <pre class="bg-light p-2 small rounded border">
+{{ json_encode($e->payload, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) }}
+                                        </pre>
                                     </div>
                                 </div>
                             </div>
@@ -282,4 +294,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

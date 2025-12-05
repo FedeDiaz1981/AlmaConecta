@@ -1,67 +1,85 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Especialidades
-        </h2>
-    </x-slot>
+@extends('layouts.app')
 
-    <div class="py-12">
+@section('title', 'Especialidades')
+
+@section('content')
+    <div class="py-8">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+
             @if(session('success'))
-                <div class="mb-4 text-green-700">
+                <div class="mb-4 text-sm rounded-xl border border-emerald-500/60 bg-emerald-900/40 text-emerald-100 px-4 py-2">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="mb-4">
-                <a href="{{ route('admin.specialties.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded">
+            <div class="mb-4 flex flex-wrap gap-3">
+                <a href="{{ route('admin.specialties.create') }}"
+                   class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong transition">
                     + Nueva especialidad
                 </a>
-                <a href="{{ route('admin.specialties.bulk') }}" class="px-4 py-2 bg-gray-600 text-white rounded">
+                <a href="{{ route('admin.specialties.bulk') }}"
+                   class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-blueMid text-sm text-silver/90 hover:bg-blueMid/40 transition">
                     Carga masiva
                 </a>
             </div>
 
-
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl overflow-hidden">
                 <table class="min-w-full text-sm">
-                    <thead class="bg-gray-100">
+                    <thead class="bg-blueDeep/80 text-silver/80">
                         <tr>
-                            <th class="px-4 py-2 text-left">ID</th>
-                            <th class="px-4 py-2 text-left">Nombre</th>
-                            <th class="px-4 py-2 text-left">Slug</th>
-                            <th class="px-4 py-2 text-left">Activa</th>
-                            <th class="px-4 py-2 text-left">Acciones</th>
+                            <th class="px-4 py-2 text-left font-semibold">ID</th>
+                            <th class="px-4 py-2 text-left font-semibold">Nombre</th>
+                            <th class="px-4 py-2 text-left font-semibold">Slug</th>
+                            <th class="px-4 py-2 text-left font-semibold">Activa</th>
+                            <th class="px-4 py-2 text-left font-semibold">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-blueMid/50 bg-blueDeep/60">
                         @forelse($specialties as $specialty)
-                            <tr class="border-b">
-                                <td class="px-4 py-2">{{ $specialty->id }}</td>
-                                <td class="px-4 py-2">{{ $specialty->name }}</td>
-                                <td class="px-4 py-2">{{ $specialty->slug }}</td>
-                                <td class="px-4 py-2">
-                                    {{ $specialty->active ? 'Sí' : 'No' }}
+                            <tr>
+                                <td class="px-4 py-2 text-silver/90">
+                                    {{ $specialty->id }}
                                 </td>
-                                <td class="px-4 py-2 space-x-2">
-                                    <a href="{{ route('admin.specialties.edit', $specialty) }}" class="text-blue-600">
-                                        Editar
-                                    </a>
+                                <td class="px-4 py-2 text-silver">
+                                    {{ $specialty->name }}
+                                </td>
+                                <td class="px-4 py-2 text-silver/70">
+                                    {{ $specialty->slug }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    @if($specialty->active)
+                                        <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/90 text-xs font-semibold text-blueDeep">
+                                            Sí
+                                        </span>
+                                    @else
+                                        <span class="inline-flex px-2 py-1 rounded-full bg-slate-600 text-xs font-semibold text-silver">
+                                            No
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="flex flex-wrap gap-3 items-center">
+                                        <a href="{{ route('admin.specialties.edit', $specialty) }}"
+                                           class="text-xs font-semibold text-gold hover:text-goldLight">
+                                            Editar
+                                        </a>
 
-                                    <form action="{{ route('admin.specialties.destroy', $specialty) }}" method="POST"
-                                        style="display:inline" onsubmit="return confirm('¿Eliminar esta especialidad?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600">
-                                            Eliminar
-                                        </button>
-                                    </form>
+                                        <form action="{{ route('admin.specialties.destroy', $specialty) }}"
+                                              method="POST"
+                                              onsubmit="return confirm('¿Eliminar esta especialidad?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="text-xs font-semibold text-red-400 hover:text-red-300">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-4 text-center">
+                                <td colspan="5" class="px-4 py-6 text-center text-silver/70">
                                     No hay especialidades aún.
                                 </td>
                             </tr>
@@ -75,4 +93,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

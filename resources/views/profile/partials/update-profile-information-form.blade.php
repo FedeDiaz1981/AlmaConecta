@@ -1,11 +1,11 @@
 <section>
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Profile Information') }}
+        <h2 class="text-lg font-semibold text-silver">
+            Información de la cuenta
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __("Update your account's profile information and email address.") }}
+        <p class="mt-1 text-sm text-silver/80">
+            Actualizá tu nombre, correo electrónico y las especialidades con las que querés figurar.
         </p>
     </header>
 
@@ -17,41 +17,68 @@
         @csrf
         @method('patch')
 
+        {{-- Nombre --}}
         <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-                          :value="old('name', $user->name)" required autofocus autocomplete="name" />
+            <x-input-label
+                for="name"
+                value="Nombre"
+                class="text-silver/90"
+            />
+            <x-text-input
+                id="name"
+                name="name"
+                type="text"
+                class="mt-1 block w-full bg-blueDeep border-blueMid text-silver"
+                :value="old('name', $user->name)"
+                required
+                autofocus
+                autocomplete="name"
+            />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
+        {{-- Email --}}
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full"
-                          :value="old('email', $user->email)" required autocomplete="username" />
+            <x-input-label
+                for="email"
+                value="Correo electrónico"
+                class="text-silver/90"
+            />
+            <x-text-input
+                id="email"
+                name="email"
+                type="email"
+                class="mt-1 block w-full bg-blueDeep border-blueMid text-silver"
+                :value="old('email', $user->email)"
+                required
+                autocomplete="username"
+            />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <div>
-                    <p class="text-sm mt-2 text-gray-800">
-                        {{ __('Your email address is unverified.') }}
+                <div class="mt-2">
+                    <p class="text-sm text-amber-200">
+                        Tu correo todavía no fue verificado.
 
-                        <button form="send-verification"
-                                class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md
-                                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            {{ __('Click here to re-send the verification email.') }}
+                        <button
+                            form="send-verification"
+                            class="underline text-sm text-silver/80 hover:text-silver rounded-md
+                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold"
+                        >
+                            Hacé clic acá para reenviar el mail de verificación.
                         </button>
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
-                        <p class="mt-2 font-medium text-sm text-green-600">
-                            {{ __('A new verification link has been sent to your email address.') }}
+                        <p class="mt-2 font-medium text-sm text-emerald-300">
+                            Te enviamos un nuevo enlace de verificación a tu correo.
                         </p>
                     @endif
                 </div>
             @endif
         </div>
 
-        {{-- NUEVO: selección de múltiples especialidades --}}
+        {{-- Especialidades múltiples --}}
         @php
             $selectedSpecialties = old('specialties', isset($profile)
                 ? $profile->specialties->pluck('id')->toArray()
@@ -59,15 +86,23 @@
         @endphp
 
         <div>
-            <x-input-label :value="__('Specialties')" />
+            <x-input-label
+                value="Especialidades"
+                class="text-silver/90"
+            />
 
-            <div class="mt-2 space-y-1">
+            <p class="mt-1 text-xs text-silver/60">
+                Podés marcar una o varias especialidades con las que quieras aparecer en Alma Conecta.
+            </p>
+
+            <div class="mt-3 space-y-1 max-h-64 overflow-y-auto rounded-lg border border-blueMid/60 bg-blueDeep/60 p-3">
                 @foreach($specialties as $specialty)
-                    <label class="flex items-center space-x-2">
+                    <label class="flex items-center gap-2 text-sm text-silver/90">
                         <input
                             type="checkbox"
                             name="specialties[]"
                             value="{{ $specialty->id }}"
+                            class="rounded border-blueMid bg-blueDeep text-gold focus:ring-gold"
                             @checked(in_array($specialty->id, $selectedSpecialties))
                         >
                         <span>{{ $specialty->name }}</span>
@@ -78,8 +113,11 @@
             <x-input-error class="mt-2" :messages="$errors->get('specialties')" />
         </div>
 
+        {{-- Botón / estado --}}
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+            <x-primary-button class="bg-gold text-blueDeep hover:bg-goldStrong">
+                Guardar
+            </x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
@@ -87,8 +125,10 @@
                     x-show="show"
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-gray-600"
-                >{{ __('Saved.') }}</p>
+                    class="text-sm text-emerald-300"
+                >
+                    Datos actualizados.
+                </p>
             @endif
         </div>
     </form>

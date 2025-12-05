@@ -1,182 +1,165 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
-    </x-slot>
+@extends('layouts.app')
 
-    {{-- Bootstrap 5 + DataTables (Bootstrap 5 + Responsive) --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
+@section('title', 'Panel de administración')
 
-    <div class="py-4">
-        <div class="container">
+@section('content')
+    <div class="py-8">
+        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6">
 
-            {{-- Card usuarios + acceso a especialidades --}}
-            <div class="card shadow-sm">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <h3 class="h5 mb-0">Usuarios activos / suspendidos</h3>
-                        <span class="badge bg-secondary">
-                            {{ isset($users) ? $users->count() : 0 }}
+                @php
+                    /** @var \Illuminate\Support\Collection $users */
+                    $users = $users ?? collect();
+                @endphp
+
+                {{-- Título + botón de especialidades --}}
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-semibold text-silver">
+                            Panel de administración · Usuarios activos / suspendidos
+                        </h2>
+                        <span
+                            class="inline-flex items-center justify-center text-xs px-2 py-1 rounded-full bg-blueDeep text-silver/80">
+                            {{ $users->count() }}
                         </span>
                     </div>
 
-                    {{-- NUEVO: botón para ir al panel de especialidades --}}
-                    <div>
-                        <a href="{{ route('admin.specialties.index') }}" class="btn btn-sm btn-primary">
-                            Gestionar especialidades
-                        </a>
-                    </div>
+                    <a href="{{ route('admin.specialties.index') }}"
+                       class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong transition">
+                        Gestionar especialidades
+                    </a>
                 </div>
 
-                <div class="card-body">
-                    @php
-                        // 1) Si NO viene $users desde el controlador, lo obtenemos acá con account_status incluido
-                        if (!isset($users)) {
-                            $users = \App\Models\User::query()
-                                ->whereIn('account_status', ['active', 'suspended'])
-                                ->select('id','name','email','role','account_status','created_at')
-                                ->orderByDesc('id')
-                                ->get();
-                        }
-
-                        // 2) Traer SIEMPRE el estado real desde DB para los IDs listados,
-                        //    por si el controlador no incluyó el campo o hay accessor por defecto.
-                        $statusMap = \App\Models\User::query()
-                            ->whereIn('id', $users->pluck('id'))
-                            ->pluck('account_status','id'); // [id => 'active'|'suspended'|...]
-                    @endphp
-
-                    <div class="table-responsive">
-                        <table id="users-table" class="table table-striped table-hover align-middle nowrap" style="width:100%">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Email</th>
-                                    <th>Rol</th>
-                                    <th>Alta</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
+                @if ($users->isEmpty())
+                    <p class="text-silver/70 text-sm">
+                        No hay usuarios activos ni suspendidos para mostrar.
+                    </p>
+                @else
+                    <div class="overflow-x-auto rounded-xl border border-blueMid/60">
+                        <table class="min-w-full divide-y divide-blueMid/60 text-sm">
+                            <thead class="bg-blueDeep/80 text-silver/80">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-semibold">ID</th>
+                                <th class="px-4 py-2 text-left font-semibold">Nombre</th>
+                                <th class="px-4 py-2 text-left font-semibold">Email</th>
+                                <th class="px-4 py-2 text-left font-semibold">Rol</th>
+                                <th class="px-4 py-2 text-left font-semibold">Alta</th>
+                                <th class="px-4 py-2 text-left font-semibold">Estado</th>
+                                <th class="px-4 py-2 text-center font-semibold">Acciones</th>
+                            </tr>
                             </thead>
-                            <tbody>
-                                @foreach($users as $u)
-                                    @php
-                                        // Estado REAL (DB) con fallback a lo que venga en el modelo
-                                        $status = strtolower((string)($statusMap[$u->id] ?? $u->account_status ?? ''));
-                                        if ($status === '') { $status = 'unknown'; }
 
-                                        $isSuspended = $status === 'suspended';
+                            <tbody class="divide-y divide-blueMid/40 bg-blueDeep/60">
+                            @foreach ($users as $u)
+                                @php
+                                    $status = strtolower((string)($u->account_status ?? 'unknown'));
+                                    $isSuspended = $status === 'suspended';
 
-                                        $roleBadge = match($u->role) {
-                                            'admin'    => 'badge bg-dark text-white',
-                                            'provider' => 'badge bg-info text-dark',
-                                            default    => 'badge bg-secondary text-white',
-                                        };
+                                    $roleClasses = match($u->role) {
+                                        'admin'    => 'bg-blue-900 text-silver',
+                                        'provider' => 'bg-cyan-200 text-blueDeep',
+                                        default    => 'bg-slate-500 text-silver',
+                                    };
 
-                                        $statusBadge = match($status) {
-                                            'active'    => 'badge bg-success',
-                                            'suspended' => 'badge bg-warning text-dark',
-                                            'pending'   => 'badge bg-secondary',
-                                            'rejected'  => 'badge bg-danger',
-                                            default     => 'badge bg-light text-dark',
-                                        };
+                                    $statusClasses = match($status) {
+                                        'active'    => 'bg-emerald-500/90 text-blueDeep',
+                                        'suspended' => 'bg-amber-400 text-blueDeep',
+                                        'pending'   => 'bg-slate-500 text-silver',
+                                        'rejected'  => 'bg-red-500 text-silver',
+                                        default     => 'bg-slate-700 text-silver',
+                                    };
 
-                                        // slug del perfil (si existe)
-                                        $slug = \App\Models\Profile::where('user_id', $u->id)->value('slug');
-                                    @endphp
-                                    <tr>
-                                        <td>{{ $u->id }}</td>
-                                        <td class="fw-semibold">{{ $u->name }}</td>
-                                        <td>{{ $u->email }}</td>
-                                        <td><span class="{{ $roleBadge }}">{{ $u->role }}</span></td>
-                                        <td>{{ optional($u->created_at)->format('Y-m-d') }}</td>
-                                        <td><span class="{{ $statusBadge }}">{{ $status }}</span></td>
-                                        <td class="text-center">
-                                            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                    $slug = \App\Models\Profile::where('user_id', $u->id)->value('slug');
+                                @endphp
 
-                                                {{-- Ver perfil (público). Se abre en nueva pestaña --}}
-                                                @if($slug)
-                                                    <a href="{{ route('profiles.show', ['slug' => $slug]) }}"
-                                                       target="_blank"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        Ver perfil
-                                                    </a>
-                                                @else
-                                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Este usuario aún no tiene perfil">
-                                                        Ver perfil
-                                                    </button>
-                                                @endif
+                                <tr>
+                                    <td class="px-4 py-2 text-silver/90">{{ $u->id }}</td>
+                                    <td class="px-4 py-2 text-silver font-semibold">{{ $u->name }}</td>
+                                    <td class="px-4 py-2 text-silver/80">{{ $u->email }}</td>
 
-                                                {{-- Suspender --}}
-                                                <form method="POST" action="{{ route('admin.users.suspend', $u) }}"
-                                                      onsubmit="return confirm('¿Suspender la cuenta de {{ $u->name }}? El usuario no podrá ingresar hasta que sea activado.');">
-                                                    @csrf
-                                                    <button type="submit"
-                                                            class="btn btn-sm btn-warning {{ $isSuspended ? 'disabled' : '' }}"
-                                                            {{ $isSuspended ? 'disabled' : '' }}>
-                                                        Suspender
-                                                    </button>
-                                                </form>
+                                    <td class="px-4 py-2">
+                                        <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold {{ $roleClasses }}">
+                                            {{ $u->role }}
+                                        </span>
+                                    </td>
 
-                                                {{-- Activar --}}
-                                                <form method="POST" action="{{ route('admin.users.activate', $u) }}"
-                                                      onsubmit="return confirm('¿Activar la cuenta de {{ $u->name }}?');">
-                                                    @csrf
-                                                    <button type="submit"
-                                                            class="btn btn-sm btn-success {{ $isSuspended ? '' : 'disabled' }}"
-                                                            {{ $isSuspended ? '' : 'disabled' }}>
-                                                        Activar
-                                                    </button>
-                                                </form>
+                                    <td class="px-4 py-2 text-silver/80">
+                                        {{ optional($u->created_at)->format('Y-m-d') }}
+                                    </td>
 
-                                                {{-- Eliminar (REST: DELETE) --}}
-                                                <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
-                                                      onsubmit="return confirm('Esta acción es PERMANENTE. ¿Eliminar definitivamente la cuenta de {{ $u->name }}?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        Eliminar
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
+                                    <td class="px-4 py-2">
+                                        <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold {{ $statusClasses }}">
+                                            {{ $status }}
+                                        </span>
+                                    </td>
+
+                                    <td class="px-4 py-2">
+                                        <div class="flex flex-wrap items-center justify-center gap-2">
+
+                                            {{-- Ver perfil público --}}
+                                            @if($slug)
+                                                <a href="{{ route('profiles.show', ['slug' => $slug]) }}"
+                                                   target="_blank"
+                                                   class="px-3 py-1.5 rounded-lg border border-blueMid text-xs text-silver/90 hover:bg-blueMid/60 transition">
+                                                    Ver perfil
+                                                </a>
+                                            @else
+                                                <span
+                                                    class="px-3 py-1.5 rounded-lg border border-blueMid/40 text-xs text-silver/40 cursor-not-allowed">
+                                                    Sin perfil
+                                                </span>
+                                            @endif
+
+                                            {{-- Suspender --}}
+                                            <form method="POST"
+                                                  action="{{ route('admin.users.suspend', $u) }}"
+                                                  onsubmit="return confirm('¿Suspender la cuenta de {{ $u->name }}?');">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                               {{ $isSuspended ? 'bg-amber-500/30 text-amber-200 cursor-not-allowed' : 'bg-amber-500 text-blueDeep hover:bg-amber-400' }}"
+                                                        {{ $isSuspended ? 'disabled' : '' }}>
+                                                    Suspender
+                                                </button>
+                                            </form>
+
+                                            {{-- Activar --}}
+                                            <form method="POST"
+                                                  action="{{ route('admin.users.activate', $u) }}"
+                                                  onsubmit="return confirm('¿Activar la cuenta de {{ $u->name }}?');">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                               {{ $isSuspended ? 'bg-emerald-500 text-blueDeep hover:bg-emerald-400' : 'bg-emerald-500/30 text-emerald-200 cursor-not-allowed' }}"
+                                                        {{ $isSuspended ? '' : 'disabled' }}>
+                                                    Activar
+                                                </button>
+                                            </form>
+
+                                            {{-- Eliminar --}}
+                                            <form method="POST"
+                                                  action="{{ route('admin.users.destroy', $u) }}"
+                                                  onsubmit="return confirm('Esta acción es PERMANENTE. ¿Eliminar definitivamente la cuenta de {{ $u->name }}?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-silver hover:bg-red-500">
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="text-muted small mt-3">
-                        * Usá el cuadro de búsqueda de arriba a la derecha para filtrar por cualquier campo.
-                        Hacé click en los encabezados para ordenar.
-                    </div>
-                </div>
+                    <p class="text-xs text-silver/60 mt-3">
+                        Podés usar el buscador del navegador (Ctrl+F / Cmd+F) para buscar por nombre, email, etc.
+                    </p>
+                @endif
             </div>
         </div>
     </div>
-
-    {{-- JS: jQuery (para DataTables), Bootstrap, DataTables --}}
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-
-    <script>
-        $(function () {
-            $('#users-table').DataTable({
-                responsive: true,
-                order: [[0, 'desc']],
-                pageLength: 10,
-                lengthMenu: [10, 25, 50, 100],
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
-                }
-            });
-        });
-    </script>
-</x-app-layout>
+@endsection

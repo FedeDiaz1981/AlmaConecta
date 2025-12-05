@@ -1,10 +1,8 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Cuentas de usuarios') }}
-        </h2>
-    </x-slot>
+@extends('layouts.app')
 
+@section('title', 'Cuentas de usuarios')
+
+@section('content')
     {{-- Bootstrap 5 sólo para esta vista --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -20,8 +18,10 @@
             <div class="card shadow-sm">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2">
-                        <h3 class="h5 mb-0">Cuentas pendientes</h3>
-                        <span class="badge bg-secondary">{{ $pending->total() ?? $pending->count() }}</span>
+                        <h2 class="h5 mb-0">Cuentas de usuarios pendientes</h2>
+                        <span class="badge bg-secondary">
+                            {{ $pending->total() ?? $pending->count() }}
+                        </span>
                     </div>
                 </div>
 
@@ -109,7 +109,11 @@
                                         <td>{{ $u->id }}</td>
                                         <td class="fw-semibold">{{ $u->name }}</td>
                                         <td>{{ $u->email }}</td>
-                                        <td><span class="badge bg-outline border">{{ $u->role }}</span></td>
+                                        <td>
+                                            <span class="badge bg-outline border">
+                                                {{ $u->role }}
+                                            </span>
+                                        </td>
                                         <td>
                                             <span class="badge {{ $accountClass }}">
                                                 {{ $accountStatus !== '' ? $accountStatus : '—' }}
@@ -130,7 +134,7 @@
                                                 Ver solicitud
                                             </button>
 
-                                            {{-- Aprobar (sólo si la CUENTA está pending) --}}
+                                            {{-- Aprobar / rechazar (sólo si la CUENTA está pending) --}}
                                             @if($accountStatus === 'pending')
                                                 <form method="POST" action="{{ route('admin.users.approve',$u) }}" class="d-inline">
                                                     @csrf
@@ -164,8 +168,12 @@
                                                             </div>
                                                         </div>
                                                         <div class="d-flex gap-2">
-                                                            <span class="badge {{ $accountClass }}">cuenta: {{ $accountStatus !== '' ? $accountStatus : '—' }}</span>
-                                                            <span class="badge {{ $profileClass }}">perfil: {{ $profileStatus !== '' ? $profileStatus : '—' }}</span>
+                                                            <span class="badge {{ $accountClass }}">
+                                                                cuenta: {{ $accountStatus !== '' ? $accountStatus : '—' }}
+                                                            </span>
+                                                            <span class="badge {{ $profileClass }}">
+                                                                perfil: {{ $profileStatus !== '' ? $profileStatus : '—' }}
+                                                            </span>
                                                         </div>
                                                     </div>
 
@@ -229,7 +237,9 @@
 
                                                                 @if($about)
                                                                     <div class="mt-3">
-                                                                        <div class="text-uppercase text-muted small mb-1">Detalle (propuesto)</div>
+                                                                        <div class="text-uppercase text-muted small mb-1">
+                                                                            Detalle (propuesto)
+                                                                        </div>
                                                                         <div class="small border rounded p-2" style="max-height:12rem;overflow:auto;">
                                                                             {!! nl2br(e($about)) !!}
                                                                         </div>
@@ -241,7 +251,8 @@
                                                                 <div class="mb-3">
                                                                     <div class="text-uppercase text-muted small">Foto (propuesta)</div>
                                                                     @if($photoPath)
-                                                                        <img src="{{ asset('storage/'.$photoPath) }}" class="img-fluid rounded border">
+                                                                        <img src="{{ asset('storage/'.$photoPath) }}"
+                                                                             class="img-fluid rounded border">
                                                                     @else
                                                                         <div class="text-muted">—</div>
                                                                     @endif
@@ -276,7 +287,10 @@
 
                                                             <form method="POST" action="{{ route('admin.users.reject',$u) }}" class="d-flex align-items-center gap-2">
                                                                 @csrf
-                                                                <input name="reason" class="form-control form-control-sm" style="min-width:260px" placeholder="Motivo (opcional)">
+                                                                <input name="reason"
+                                                                       class="form-control form-control-sm"
+                                                                       style="min-width:260px"
+                                                                       placeholder="Motivo (opcional)">
                                                                 <button class="btn btn-danger">Rechazar</button>
                                                             </form>
                                                         @else
@@ -305,4 +319,4 @@
             {{-- Sin bloque de "Cuentas suspendidas" --}}
         </div>
     </div>
-</x-app-layout>
+@endsection

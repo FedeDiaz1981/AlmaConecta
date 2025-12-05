@@ -31,7 +31,7 @@
                 {{-- Buscador en header --}}
                 <form method="GET"
                       action="{{ route('search') }}"
-                      class="hidden md:flex items-stretch flex-1 max-w-md border border-gray-300 rounded-lg overflow-hidden bg-white">
+                      class="hidden items-stretch flex-1 max-w-md border border-gray-300 rounded-lg overflow-hidden bg-white ">
                     <input
                         type="text"
                         name="q"
@@ -54,7 +54,7 @@
 
                 {{-- Selector de país (simple por ahora) --}}
                 <button type="button"
-                        class="flex items-center gap-1 border border-gray-300 rounded-md px-2 py-1 text-xs hover:bg-gray-50">
+                        class="hidden items-center gap-1 border border-gray-300 rounded-md px-2 py-1 text-xs hover:bg-gray-50">
                     <span class="w-4 h-3 bg-gray-300 rounded-sm"></span>
                     <span>Argentina</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none"
@@ -64,7 +64,7 @@
                     </svg>
                 </button>
 
-                <a href="{{ route('dashboard.profile.edit') }}" class="hover:text-gold whitespace-nowrap">
+                <a href="{{ route('dashboard.profile.edit') }}" class="hidden hover:text-gold whitespace-nowrap">
                     Publicá tu espacio
                 </a>
 

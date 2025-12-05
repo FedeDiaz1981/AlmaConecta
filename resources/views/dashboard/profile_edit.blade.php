@@ -1,28 +1,37 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="font-semibold text-xl text-gray-900">Mi perfil profesional</h2>
-                <p class="mt-1 text-sm text-gray-500">
+@extends('layouts.app')
+
+@section('title', 'Panel de administración')
+
+@section('content')
+    @php
+        // Bloqueo si hay edición pendiente
+        $locked = isset($pendingEdit) && $pendingEdit;
+    @endphp
+
+    <div class="py-10 bg-blueDeep">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            {{-- Título de página --}}
+            <div class="mb-6">
+                <h1 class="font-semibold text-2xl text-silver">
+                    Mi perfil profesional
+                </h1>
+                <p class="mt-1 text-sm text-silver/70">
                     Actualizá la información que van a ver tus potenciales clientes.
                 </p>
             </div>
-        </div>
-    </x-slot>
 
-    <div class="py-10 bg-slate-50">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white/90 border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 space-y-6">
+            <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6 sm:p-8 space-y-6">
 
                 {{-- mensajes de estado --}}
                 @if (session('status'))
-                    <div class="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <div class="mb-2 rounded-xl border border-emerald-500/60 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-200">
                         {{ session('status') }}
                     </div>
                 @endif
 
                 @if ($errors->any())
-                    <div class="mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    <div class="mb-2 rounded-xl border border-red-500/60 bg-red-900/40 px-4 py-3 text-sm text-red-100">
                         <div class="font-semibold mb-1">Revisá estos campos:</div>
                         <ul class="list-disc pl-5 space-y-0.5">
                             @foreach ($errors->all() as $e)
@@ -32,13 +41,11 @@
                     </div>
                 @endif
 
-                @php $locked = isset($pendingEdit) && $pendingEdit; @endphp
-
                 {{-- Aviso de bloqueo si hay pending --}}
                 @if($locked)
-                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900 text-sm flex flex-col gap-2">
+                    <div class="rounded-2xl border border-amber-400/70 bg-amber-900/30 px-4 py-4 text-amber-100 text-sm flex flex-col gap-2">
                         <div class="flex items-center gap-2">
-                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-xs font-semibold">
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-800 text-amber-100 text-xs font-semibold">
                                 !
                             </span>
                             <div class="font-medium">Tenés una edición pendiente de aprobación.</div>
@@ -46,7 +53,7 @@
                         <div>
                             Hasta que se apruebe o la anules, no podés modificar el perfil.
                             @if($pendingEdit?->created_at)
-                                <span class="text-amber-700 block">
+                                <span class="text-amber-200 block">
                                     Enviada el {{ $pendingEdit->created_at->format('d/m/Y H:i') }}.
                                 </span>
                             @endif
@@ -56,7 +63,7 @@
                                   onsubmit="return confirm('¿Anular la petición de aprobación?\nSe perderán los cambios enviados.');">
                                 @csrf
                                 <button
-                                    class="inline-flex items-center rounded-full border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 transition">
+                                    class="inline-flex items-center rounded-full border border-red-400 bg-transparent px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-900/40 transition">
                                     Anular petición
                                 </button>
                             </form>
@@ -74,15 +81,15 @@
                     <section class="space-y-4">
                         <div class="flex items-center justify-between gap-2">
                             <div>
-                                <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                                <h3 class="text-sm font-semibold text-silver uppercase tracking-wide">
                                     Datos principales
                                 </h3>
-                                <p class="text-xs text-slate-500 mt-1">
+                                <p class="text-xs text-silver/60 mt-1">
                                     Nombre público y especialidades que verá el usuario.
                                 </p>
                             </div>
                             @if($profile->status === 'approved')
-                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                                <span class="inline-flex items-center rounded-full bg-emerald-900/60 px-3 py-1 text-xs font-medium text-emerald-200 border border-emerald-500/60">
                                     Perfil publicado
                                 </span>
                             @endif
@@ -91,9 +98,9 @@
                         <div class="grid gap-5 md:grid-cols-2">
                             {{-- Nombre público --}}
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre público</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Nombre público</label>
                                 <input name="display_name"
-                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
+                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/40"
                                        value="{{ old('display_name', $profile->display_name) }}"
                                        {{ $locked ? 'disabled' : '' }}>
                             </div>
@@ -120,10 +127,10 @@
                             @endphp
 
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Especialidades</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Especialidades</label>
 
                                 @if($allSpecialties->isEmpty())
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-xs text-silver/60">
                                         Todavía no hay especialidades configuradas. Consultá con el administrador.
                                     </p>
                                 @else
@@ -133,12 +140,12 @@
                                          class="space-y-2">
                                         <input type="text"
                                                id="specialty-search"
-                                               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                               class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                                placeholder="Escribí para buscar especialidades..."
                                                {{ $locked ? 'disabled' : '' }}>
 
                                         <div id="specialty-results"
-                                             class="border border-slate-200 rounded-xl bg-white shadow-sm mt-1 hidden max-h-52 overflow-auto text-sm divide-y divide-slate-100">
+                                             class="border border-blueMid rounded-xl bg-blueDeep/95 shadow-soft mt-1 hidden max-h-52 overflow-auto text-sm divide-y divide-blueNight/60">
                                             {{-- items generados por JS --}}
                                         </div>
 
@@ -146,12 +153,12 @@
                                              class="flex flex-wrap gap-2 mt-1">
                                             @foreach($allSpecialties as $s)
                                                 @if(in_array($s['id'], $selectedIds))
-                                                    <span class="inline-flex items-center px-2.5 py-1 bg-indigo-50 text-indigo-800 text-xs rounded-full specialty-chip"
+                                                    <span class="inline-flex items-center px-2.5 py-1 bg-gold/10 text-gold text-xs rounded-full specialty-chip border border-gold/40"
                                                           data-id="{{ $s['id'] }}">
                                                         {{ $s['name'] }}
                                                         @unless($locked)
                                                             <button type="button"
-                                                                    class="ml-1 text-indigo-700 hover:text-indigo-900 text-xs specialty-chip-remove"
+                                                                    class="ml-1 text-gold hover:text-goldLight text-xs specialty-chip-remove"
                                                                     aria-label="Quitar">
                                                                 ×
                                                             </button>
@@ -161,14 +168,14 @@
                                                 @endif
                                             @endforeach
                                         </div>
-                                        <p class="text-[11px] text-slate-500">
+                                        <p class="text-[11px] text-silver/60">
                                             Podés seleccionar varias especialidades.
                                         </p>
                                     </div>
                                 @endif
 
                                 @error('specialties')
-                                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                                    <div class="text-red-300 text-sm mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
@@ -176,20 +183,20 @@
 
                     {{-- BLOQUE: Modalidad y ubicación --}}
                     <section class="space-y-4">
-                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                        <h3 class="text-sm font-semibold text-silver uppercase tracking-wide">
                             Modalidad y ubicación
                         </h3>
 
                         <div class="grid gap-5 md:grid-cols-2">
                             {{-- Modalidad --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Modalidad</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Modalidad</label>
                                 @php
                                     $currentMod = ($profile->mode_remote && $profile->mode_presential) ? 'ambas'
                                         : ($profile->mode_remote ? 'remoto' : 'presencial');
                                 @endphp
                                 <select name="modality"
-                                        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                        class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                         {{ $locked ? 'disabled' : '' }}>
                                     <option value="remoto" {{ old('modality',$currentMod)==='remoto' ? 'selected' : '' }}>Remoto</option>
                                     <option value="ambas" {{ old('modality',$currentMod)==='ambas' ? 'selected' : '' }}>Remoto y presencial</option>
@@ -200,29 +207,45 @@
                             {{-- UBICACIÓN --}}
                             <style>
                                 .ac-wrap{position:relative}
-                                .ac-list{position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;box-shadow:0 8px 16px rgba(15,23,42,.08);max-height:16rem;overflow:auto}
-                                .ac-item{padding:.5rem .75rem;cursor:pointer;font-size:.875rem}
-                                .ac-item:hover{background:#f9fafb}
+                                .ac-list{
+                                    position:absolute;
+                                    left:0;
+                                    right:0;
+                                    z-index:40;
+                                    background:#020617;
+                                    border:1px solid #1e293b;
+                                    border-radius:.75rem;
+                                    box-shadow:0 10px 20px rgba(15,23,42,.55);
+                                    max-height:16rem;
+                                    overflow:auto
+                                }
+                                .ac-item{
+                                    padding:.5rem .75rem;
+                                    cursor:pointer;
+                                    font-size:.875rem;
+                                    color:#e5e7eb;
+                                }
+                                .ac-item:hover{background:#0f172a}
                             </style>
 
                             <div class="md:col-span-2 space-y-2">
-                                <label class="block text-sm font-medium text-slate-700">Ubicación</label>
+                                <label class="block text-sm font-medium text-silver">Ubicación</label>
                                 <div class="ac-wrap">
                                     <div class="flex gap-2">
                                         <input id="loc_input"
-                                               class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                               class="flex-1 rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                                autocomplete="off"
                                                placeholder="Ciudad, provincia o dirección…"
                                                {{ $locked ? 'disabled' : '' }}>
                                         <button type="button" id="btn_myloc"
-                                                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                class="inline-flex items-center rounded-xl border border-blueMid bg-blueNight/40 px-3 py-2 text-xs font-medium text-silver hover:bg-blueNight/70 disabled:opacity-50"
                                                 {{ $locked ? 'disabled' : '' }}>
                                             Mi ubicación
                                         </button>
                                     </div>
                                     <div id="loc_list" class="ac-list hidden"></div>
                                 </div>
-                                <div class="text-xs text-gray-500" id="coords_hint" style="display:none"></div>
+                                <div class="text-xs text-silver/60" id="coords_hint" style="display:none"></div>
 
                                 <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
                                 <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
@@ -230,30 +253,30 @@
 
                             <div class="hidden md:grid-cols-3 gap-4 mt-3 md:col-span-2">
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1">País (ISO-2)</label>
+                                    <label class="block text-xs font-medium text-silver/70 mb-1">País (ISO-2)</label>
                                     <input name="country" id="country"
-                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           class="w-full rounded-lg border border-blueMid bg-blueNight/40 px-3 py-2 text-xs text-silver"
                                            value="{{ old('country',$profile->country) }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1">Provincia/Estado</label>
+                                    <label class="block text-xs font-medium text-silver/70 mb-1">Provincia/Estado</label>
                                     <input name="state" id="state"
-                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           class="w-full rounded-lg border border-blueMid bg-blueNight/40 px-3 py-2 text-xs text-silver"
                                            value="{{ old('state',$profile->state) }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1">Ciudad</label>
+                                    <label class="block text-xs font-medium text-silver/70 mb-1">Ciudad</label>
                                     <input name="city" id="city"
-                                           class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                           class="w-full rounded-lg border border-blueMid bg-blueNight/40 px-3 py-2 text-xs text-silver"
                                            value="{{ old('city',$profile->city) }}" readonly>
                                 </div>
                             </div>
 
                             <div class="hidden md:col-span-2">
                                 <input name="address" id="address"
-                                       class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
+                                       class="w-full rounded-lg border border-blueMid bg-blueNight/40 px-3 py-2 text-xs text-silver"
                                        value="{{ old('address',$profile->address) }}" readonly>
-                                <p class="text-[11px] text-gray-500 mt-1">
+                                <p class="text-[11px] text-silver/60 mt-1">
                                     Coordenadas:
                                     <span id="latlngText">{{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}</span>
                                 </p>
@@ -263,29 +286,29 @@
 
                     {{-- BLOQUE: Contacto y detalle --}}
                     <section class="space-y-4">
-                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                        <h3 class="text-sm font-semibold text-silver uppercase tracking-wide">
                             Contacto y descripción
                         </h3>
 
                         <div class="grid gap-5 md:grid-cols-2">
                             {{-- WhatsApp --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">WhatsApp</label>
+                                <label class="block text-sm font-medium text-silver mb-1">WhatsApp</label>
                                 <input name="whatsapp"
-                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                        placeholder="+54 9 11 5555-5555"
                                        value="{{ old('whatsapp', $profile->whatsapp) }}"
                                        {{ $locked ? 'disabled' : '' }}>
-                                <p class="text-[11px] text-gray-500 mt-1">
+                                <p class="text-[11px] text-silver/60 mt-1">
                                     Ingresá tu número con código de país (puede llevar +, espacios o guiones).
                                 </p>
                             </div>
 
                             {{-- Email --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Correo</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Correo</label>
                                 <input name="contact_email" type="email"
-                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                        placeholder="tucorreo@dominio.com"
                                        value="{{ old('contact_email', $profile->contact_email) }}"
                                        {{ $locked ? 'disabled' : '' }}>
@@ -294,47 +317,47 @@
 
                         {{-- Detalle --}}
                         <div class="space-y-2">
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Detalle (texto enriquecido)</label>
+                            <label class="block text-sm font-medium text-silver mb-1">Detalle (texto enriquecido)</label>
                             <link rel="stylesheet" href="https://unpkg.com/trix@2.0.4/dist/trix.css">
                             <script src="https://unpkg.com/trix@2.0.4/dist/trix.umd.min.js"></script>
                             <input id="about" type="hidden" name="about"
                                    value="{{ old('about', $profile->about) }}"
                                    {{ $locked ? 'disabled' : '' }}>
-                            <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                                <trix-editor input="about" class="trix-content text-sm" {{ $locked ? 'contenteditable=false' : '' }}></trix-editor>
+                            <div class="rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2 shadow-sm">
+                                <trix-editor input="about" class="trix-content text-sm text-silver" {{ $locked ? 'contenteditable=false' : '' }}></trix-editor>
                             </div>
                             @if($locked)
-                                <p class="text-[11px] text-gray-500 mt-1">Bloqueado por solicitud pendiente.</p>
+                                <p class="text-[11px] text-silver/60 mt-1">Bloqueado por solicitud pendiente.</p>
                             @endif
                         </div>
                     </section>
 
                     {{-- BLOQUE: Medios y template --}}
                     <section class="space-y-4">
-                        <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+                        <h3 class="text-sm font-semibold text-silver uppercase tracking-wide">
                             Imagen y formato
                         </h3>
 
                         <div class="grid gap-5 md:grid-cols-2">
                             {{-- Foto --}}
                             <div class="space-y-2">
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Foto</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Foto</label>
                                 <input type="file" name="photo" accept="image/*"
-                                       class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-60"
+                                       class="block w-full text-sm text-silver file:mr-3 file:rounded-lg file:border-0 file:bg-gold/10 file:px-3 file:py-2 file:text-xs file:font-medium file:text-gold hover:file:bg-gold/20 disabled:opacity-60"
                                        {{ $locked ? 'disabled' : '' }}>
                                 @if($profile->photo_path)
                                     <div class="mt-2">
                                         <img src="{{ asset('storage/'.$profile->photo_path) }}"
-                                             class="h-20 w-20 rounded-xl object-cover border border-slate-200">
+                                             class="h-20 w-20 rounded-xl object-cover border border-blueMid">
                                     </div>
                                 @endif
                             </div>
 
                             {{-- Video --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Video (URL)</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Video (URL)</label>
                                 <input name="video_url"
-                                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                        placeholder="https://www.youtube.com/watch?v=..."
                                        value="{{ old('video_url', $profile->video_url) }}"
                                        {{ $locked ? 'disabled' : '' }}>
@@ -342,9 +365,9 @@
 
                             {{-- Template --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Template</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Template</label>
                                 <select name="template_key"
-                                        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50"
+                                        class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
                                         {{ $locked ? 'disabled' : '' }}>
                                     <option value="a" {{ old('template_key',$profile->template_key)==='a' ? 'selected' : '' }}>Template A</option>
                                     <option value="b" {{ old('template_key',$profile->template_key)==='b' ? 'selected' : '' }}>Template B</option>
@@ -355,7 +378,7 @@
 
                     <div class="pt-2 flex items-center justify-end gap-3">
                         <button type="submit"
-                                class="inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="inline-flex items-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-blueDeep shadow-soft hover:bg-goldStrong focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold focus:ring-offset-blueDeep disabled:opacity-50 disabled:cursor-not-allowed"
                                 {{ $locked ? 'disabled' : '' }}>
                             Enviar a aprobación
                         </button>
@@ -491,12 +514,12 @@
             if (current.includes(id)) return;
 
             const chip = document.createElement('span');
-            chip.className = 'inline-flex items-center px-2.5 py-1 bg-indigo-50 text-indigo-800 text-xs rounded-full specialty-chip';
+            chip.className = 'inline-flex items-center px-2.5 py-1 bg-gold/10 text-gold text-xs rounded-full specialty-chip border border-gold/40';
             chip.dataset.id = id;
             chip.innerHTML = `
                 ${name}
                 <button type="button"
-                        class="ml-1 text-indigo-700 hover:text-indigo-900 text-xs specialty-chip-remove"
+                        class="ml-1 text-gold hover:text-goldLight text-xs specialty-chip-remove"
                         aria-label="Quitar">×</button>
             `;
             selectedWrap.appendChild(chip);
@@ -526,7 +549,7 @@
 
             results.innerHTML = list.map(s => `
                 <button type="button"
-                        class="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 specialty-result-item"
+                        class="w-full text-left px-3 py-1.5 text-sm hover:bg-blueNight/70 text-silver specialty-result-item"
                         data-id="${s.id}"
                         data-name="${s.name}">
                     ${s.name}
@@ -585,4 +608,5 @@
         });
     })();
     </script>
-</x-app-layout>
+@endsection
+::contentReference[oaicite:0]{index=0}

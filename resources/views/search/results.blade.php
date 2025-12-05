@@ -1,48 +1,122 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h1 class="text-2xl font-semibold">Resultados</h1>
-    </x-slot>
+@extends('layouts.app')
 
-    <div class="py-6">
-        <div class="max-w-5xl mx-auto">
+@section('title', 'Resultados de búsqueda')
 
-            <div class="mb-4 text-sm text-gray-600">
-                @if($q) <strong>Búsqueda:</strong> "{{ $q }}" · @endif
-                @if($lat && $lng) <strong>Ubicación:</strong> {{ $loc ?: 'mi ubicación' }} · <strong>Radio:</strong> {{ $r }} km · @endif
-                <strong>Remoto:</strong> {{ $remote ? 'Sí' : 'No' }}
+@section('content')
+    <div class="py-8">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            {{-- Resumen de búsqueda --}}
+            <div class="mb-6 rounded-2xl border border-blueMid bg-blueNight/80 px-4 py-3 text-sm text-silver/90">
+                <div class="flex flex-wrap items-center gap-2">
+                    @if($q)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blueDeep/70 px-3 py-1 text-xs">
+                            <span class="opacity-70">Búsqueda:</span>
+                            <span class="font-semibold">"{{ $q }}"</span>
+                        </span>
+                    @endif
+
+                    @if($lat && $lng)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blueDeep/70 px-3 py-1 text-xs">
+                            <span class="opacity-70">Ubicación:</span>
+                            <span class="font-semibold">{{ $loc ?: 'mi ubicación' }}</span>
+                        </span>
+
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blueDeep/70 px-3 py-1 text-xs">
+                            <span class="opacity-70">Radio:</span>
+                            <span class="font-semibold">{{ $r }} km</span>
+                        </span>
+                    @endif
+
+                    <span class="inline-flex items-center gap-1 rounded-full bg-blueDeep/70 px-3 py-1 text-xs">
+                        <span class="opacity-70">Remoto:</span>
+                        <span class="font-semibold">{{ $remote ? 'Sí' : 'No' }}</span>
+                    </span>
+
+                    <a href="{{ route('home') }}"
+                       class="ml-auto text-xs text-gold hover:text-goldLight">
+                        Modificar búsqueda
+                    </a>
+                </div>
             </div>
 
+            {{-- Resultados --}}
             @forelse($results as $p)
-                <div class="bg-white rounded shadow p-4 mb-3">
-                    <div class="flex justify-between">
-                        <div>
-                            <a class="font-semibold text-lg" href="{{ route('profiles.show', $p->slug) }}">
+                <article class="mb-4 rounded-2xl border border-blueMid/70 bg-blueNight/80 px-4 py-4 shadow-soft">
+                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+
+                        {{-- Info principal --}}
+                        <div class="space-y-1">
+                            <a href="{{ route('profiles.show', $p->slug) }}"
+                               class="text-lg font-semibold text-silver hover:text-gold transition">
                                 {{ $p->display_name }}
                             </a>
-                            <div class="text-sm text-gray-600">
-                                {{ $p->service->name ?? 'Sin especialidad' }}
-                                @if($p->mode_remote) · Remoto @endif
-                                @if($p->mode_presential) · Presencial @endif
-                                @if($p->city) · {{ $p->city }}@endif
-                                @if($p->state){{ $p->city ? ',' : ' ·' }} {{ $p->state }}@endif
+
+                            <div class="text-xs text-silver/70 flex flex-wrap gap-2">
+                                <span>
+                                    {{ $p->service->name ?? 'Sin especialidad' }}
+                                </span>
+
+                                @if($p->mode_remote)
+                                    <span class="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-500/40">
+                                        Remoto
+                                    </span>
+                                @endif
+
+                                @if($p->mode_presential)
+                                    <span class="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] font-semibold text-sky-200 border border-sky-500/40">
+                                        Presencial
+                                    </span>
+                                @endif
+
+                                @if($p->city || $p->state)
+                                    <span class="inline-flex items-center gap-1 text-[11px] text-silver/70">
+                                        •
+                                        <span>
+                                            @if($p->city)
+                                                {{ $p->city }}
+                                            @endif
+                                            @if($p->state)
+                                                {{ $p->city ? ', ' : '' }}{{ $p->state }}
+                                            @endif
+                                        </span>
+                                    </span>
+                                @endif
                             </div>
+
+                            @if(!empty($p->about))
+                                <p class="mt-2 text-xs text-silver/75 line-clamp-3">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($p->about), 200) }}
+                                </p>
+                            @endif
                         </div>
-                        <div class="text-right">
+
+                        {{-- Distancia --}}
+                        <div class="text-right min-w-[6rem]">
                             @if(!is_null($p->distance ?? null))
-                                <div class="text-sm text-gray-700">{{ number_format($p->distance, 1) }} km</div>
+                                <div class="inline-flex items-center rounded-full bg-blueDeep/80 px-3 py-1 text-xs text-silver/90 border border-blueMid/70">
+                                    {{ number_format($p->distance, 1) }} km
+                                </div>
                             @endif
                         </div>
                     </div>
-                </div>
+                </article>
             @empty
-                <div class="bg-white rounded p-6 text-gray-700 shadow">
-                    No encontramos resultados. Probá ampliando el radio o incluyendo remoto.
+                <div class="rounded-2xl border border-blueMid bg-blueNight/80 px-6 py-6 text-sm text-silver/85 shadow-soft">
+                    <p class="font-semibold mb-1">No encontramos resultados.</p>
+                    <p class="text-silver/70">
+                        Probá ampliando el radio de búsqueda, cambiando la ubicación
+                        o activando la opción de modalidad remota.
+                    </p>
                 </div>
             @endforelse
 
-            <div class="mt-6">
-                {{ $results->withQueryString()->links() }}
-            </div>
+            {{-- Paginación --}}
+            @if($results->hasPages())
+                <div class="mt-6">
+                    {{ $results->withQueryString()->links() }}
+                </div>
+            @endif
         </div>
     </div>
-</x-app-layout>
+@endsection
