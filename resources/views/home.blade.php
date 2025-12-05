@@ -33,30 +33,28 @@
 
             {{-- Buscador principal --}}
             <form method="GET" action="{{ route('search') }}"
-                  class="bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
-                         mx-auto md:mx-0 md:max-w-xl">
+                class="hero-search bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
+                        mx-auto md:mx-0">
 
                 <div class="flex flex-col gap-4">
-                    {{-- q: especialidad (solo opciones existentes) --}}
-                    <div class="flex flex-col relative ">
+
+                    {{-- q: especialidad --}}
+                    <div class="flex flex-col relative">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Qué estás buscando? <span class="text-red-400">*</span>
                         </label>
 
                         <div class="relative">
                             <input type="text"
-                                   name="q"
-                                   id="q"
-                                   autocomplete="off"
-                                   required
-                                   placeholder="Reiki, Yoga, Constelaciones..."
-                                   value="{{ request('q') }}"
-                                   class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
-                                          px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+                                name="q"
+                                id="q"
+                                autocomplete="off"
+                                required
+                                placeholder="Reiki, Yoga, Constelaciones..."
+                                value="{{ request('q') }}"
+                                class="hero-input pr-9">
 
-                            {{-- Botón limpiar selección --}}
-                            <button type="button"
-                                    id="q-clear"
+                            <button type="button" id="q-clear"
                                     class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
                                 ✕
                             </button>
@@ -65,12 +63,12 @@
                         <input type="hidden" name="specialty_id" id="specialty_id" value="{{ request('specialty_id') }}">
 
                         <div id="q-suggestions"
-                             class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
+                            class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
                                     max-h-56 overflow-auto text-sm hidden z-20">
                         </div>
                     </div>
 
-                    {{-- loc: ubicación --}}
+                    {{-- loc --}}
                     <div class="flex flex-col relative">
                         <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Dónde? <span class="text-red-400">*</span>
@@ -78,18 +76,15 @@
 
                         <div class="relative">
                             <input type="text"
-                                   name="loc"
-                                   id="loc"
-                                   autocomplete="off"
-                                   required
-                                   placeholder="Ciudad o barrio"
-                                   value="{{ request('loc') }}"
-                                   class="w-full bg-blueNight/70 border border-blueNight text-silver text-sm rounded-xl
-                                          px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+                                name="loc"
+                                id="loc"
+                                autocomplete="off"
+                                required
+                                placeholder="Ciudad o barrio"
+                                value="{{ request('loc') }}"
+                                class="hero-input pr-9">
 
-                            {{-- Botón limpiar ubicación --}}
-                            <button type="button"
-                                    id="loc-clear"
+                            <button type="button" id="loc-clear"
                                     class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
                                 ✕
                             </button>
@@ -99,20 +94,19 @@
                         <input type="hidden" id="lng" name="lng" value="{{ request('lng') }}">
 
                         <div id="loc-suggestions"
-                             class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
+                            class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
                                     max-h-56 overflow-auto text-sm hidden z-20">
                         </div>
                     </div>
 
-                    {{-- área + modalidad + botón --}}
+                    {{-- radio + remoto --}}
                     <div class="flex flex-col gap-2">
                         <div class="flex flex-col">
                             <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                                 Área de búsqueda
                             </label>
-                            <select name="r"
-                                    class="w-full bg-blueNight/70 border border-blueNight text-silver text-xs rounded-xl
-                                           px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+
+                            <select name="r" class="hero-input">
                                 @foreach([5, 10, 20, 50, 100] as $radius)
                                     <option value="{{ $radius }}" {{ (int)request('r', 20) === $radius ? 'selected' : '' }}>
                                         Hasta {{ $radius }} km
@@ -123,25 +117,25 @@
 
                         <label class="flex items-center gap-2 text-[16px] text-silver/70 text-left">
                             <input type="checkbox"
-                                   name="remote"
-                                   value="1"
-                                   class="rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
-                                   {{ request()->boolean('remote', true) ? 'checked' : '' }}>
+                                name="remote"
+                                value="1"
+                                class="h-4 w-4 rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
+                                {{ request()->boolean('remote', true) ? 'checked' : '' }}>
                             <span class="text-[18px]">Incluir modalidad online/remota</span>
                         </label>
 
                         <button type="submit"
                                 id="search-btn"
                                 disabled
-                                class="w-[50%] px-6 py-2.5 mx-auto rounded-xl bg-gold text-blueDeep text-sm font-semibold
-                                       shadow-soft hover:bg-goldStrong transition
-                                       disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="hero-button disabled:opacity-50 disabled:cursor-not-allowed mx-auto w-1/2">
                             Buscar
                         </button>
+
                     </div>
                 </div>
 
             </form>
+
 
             <p class="mt-4 text-[16px] text-silver/60">
                 Tip: podés buscar directamente por especialidad.
