@@ -17,3 +17,17 @@ a {
 a:hover {
   color: var(--ac-gold);
 }
+
+@layer base {
+  /* Inputs en modo oscuro: texto más claro y placeholder más suave */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    @apply text-silver font-medium;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-silver/40;
+  }
+}

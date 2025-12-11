@@ -19,9 +19,14 @@
             @endif
 
             <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6">
-                <form action="{{ route('admin.specialties.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.specialties.store') }}"
+                      method="POST"
+                      enctype="multipart/form-data"
+                      class="space-y-4">
+
                     @csrf
 
+                    {{-- Nombre --}}
                     <div>
                         <label class="block mb-1 text-sm font-medium text-silver/90">
                             Nombre <span class="text-red-400">*</span>
@@ -36,10 +41,13 @@
                         >
                     </div>
 
-                    {{-- slug oculto, por si en algún momento lo necesitás enviar --}}
+                    {{-- slug oculto --}}
                     <input type="hidden" name="slug" value="{{ old('slug') }}">
 
-                    <div>
+                    {{-- Activa + Destacada --}}
+                    <div class="space-y-2">
+
+                        {{-- Activa --}}
                         <label class="inline-flex items-center gap-2 text-sm text-silver/80">
                             <input type="hidden" name="active" value="0">
                             <input
@@ -51,8 +59,41 @@
                             >
                             <span>Activa</span>
                         </label>
+
+                        {{-- Destacada --}}
+                        <label class="inline-flex items-center gap-2 text-sm text-silver/80">
+                            <input type="hidden" name="is_featured" value="0">
+                            <input
+                                type="checkbox"
+                                name="is_featured"
+                                value="1"
+                                class="rounded border-blueMid bg-blueDeep/80 text-gold focus:ring-gold"
+                                {{ old('is_featured', 0) ? 'checked' : '' }}
+                            >
+                            <span>Destacada (aparece en “Prácticas más buscadas”)</span>
+                        </label>
+
+                        {{-- Imagen --}}
+                        <div>
+                            <label class="block mb-1 text-sm font-medium text-silver/90">
+                                Imagen para tarjeta destacada
+                            </label>
+                            <input
+                                type="file"
+                                name="featured_image"
+                                accept="image/*"
+                                class="w-full text-sm text-silver file:mr-3 file:rounded-lg file:border-0
+                                       file:bg-gold/10 file:px-3 file:py-2 file:text-xs file:font-medium
+                                       file:text-gold hover:file:bg-gold/20"
+                            >
+                            <p class="text-[11px] text-silver/60 mt-1">
+                                Opcional. Se usa como fondo en las tarjetas de “Prácticas más buscadas”.
+                            </p>
+                        </div>
+
                     </div>
 
+                    {{-- Botones --}}
                     <div class="flex gap-3 mt-2">
                         <button
                             type="submit"
@@ -68,6 +109,7 @@
                             Cancelar
                         </a>
                     </div>
+
                 </form>
             </div>
         </div>

@@ -209,21 +209,31 @@ class SearchController extends Controller
     }
 
     public function show(string $slug, Request $request)
-    {
-        $profile = Profile::with(['specialties'])
-            ->where('slug', $slug)
-            ->firstOrFail();
+{
+    $profile = Profile::with(['specialties'])
+        ->where('slug', $slug)
+        ->firstOrFail();
 
-        if ($profile->status !== 'approved') {
-            $isOwner = auth()->check() && auth()->id() === $profile->user_id;
-            $isAdmin = auth()->check() && auth()->user()->can('admin');
-            $preview = $request->boolean('preview');
+    // Dueño / admin / preview
+    $isOwner = auth()->check() && auth()->id() === $profile->user_id;
+    $isAdmin = auth()->check() && auth()->user()->can('admin');
+    $preview = $request->boolean('preview');
 
-            if (!($preview && ($isOwner || $isAdmin))) {
-                abort(404);
-            }
+    // Si NO está aprobado, solo lo pueden ver dueño o admin con ?preview=1
+    if ($profile->status !== 'approved') {
+        if (!($preview && ($isOwner || $isAdmin))) {
+            abort(404);
         }
-
-        return view('profiles.show', ['profile' => $profile]);
     }
+
+    // Contador de vistas:
+    // - No suma si es preview
+    // - No suma si lo está viendo el dueño
+    if (!$preview && !$isOwner) {
+        $profile->increment('views_count');
+    }
+
+    return view('profiles.show', ['profile' => $profile]);
+}
+
 }

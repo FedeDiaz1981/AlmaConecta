@@ -17,14 +17,21 @@ class Profile extends Model
         'display_name',
         'slug',
         'about',
+
+        // modalidad
         'mode_presential',
         'mode_remote',
+
+        // ubicación
         'country',
         'state',
         'city',
         'address',
+        'location_label',   // texto exacto elegido por el provider
         'lat',
         'lng',
+
+        // presentación / otros
         'template_key',
         'status',
         'approved_at',
@@ -47,13 +54,13 @@ class Profile extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Servicios antiguos (lo dejamos por compatibilidad, aunque el select está oculto)
+    // Servicios antiguos (compatibilidad)
     public function services(): BelongsToMany
     {
         return $this->belongsToMany(Service::class, 'profile_service');
     }
 
-    // NUEVO: muchas especialidades a través de profile_specialty
+    // Muchas especialidades a través de profile_specialty
     public function specialties(): BelongsToMany
     {
         return $this->belongsToMany(Specialty::class, 'profile_specialty')

@@ -14,6 +14,12 @@ class Specialty extends Model
         'name',
         'slug',
         'active',
+        'is_featured',   // ⬅️ nueva columna (práctica destacada)
+    ];
+
+    protected $casts = [
+        'active'     => 'boolean',
+        'is_featured'=> 'boolean',
     ];
 
     public $timestamps = false; // ponelo en true si la tabla tiene created_at/updated_at

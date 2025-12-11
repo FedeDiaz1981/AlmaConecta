@@ -19,10 +19,14 @@
             @endif
 
             <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6">
-                <form action="{{ route('admin.specialties.update', $specialty) }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.specialties.update', $specialty) }}"
+                      method="POST"
+                      enctype="multipart/form-data"
+                      class="space-y-4">
                     @csrf
                     @method('PUT')
 
+                    {{-- Nombre --}}
                     <div>
                         <label class="block mb-1 text-sm font-medium text-silver/90">
                             Nombre <span class="text-red-400">*</span>
@@ -37,14 +41,15 @@
                         >
                     </div>
 
-                    {{-- slug oculto; lo seguimos mandando por si ya existe --}}
+                    {{-- slug oculto --}}
                     <input
                         type="hidden"
                         name="slug"
                         value="{{ old('slug', $specialty->slug) }}"
                     >
 
-                    <div>
+                    {{-- Flags: activa / destacada --}}
+                    <div class="space-y-2">
                         <label class="inline-flex items-center gap-2 text-sm text-silver/80">
                             <input type="hidden" name="active" value="0">
                             <input
@@ -56,6 +61,40 @@
                             >
                             <span>Activa</span>
                         </label>
+
+                        <label class="inline-flex items-center gap-2 text-sm text-silver/80">
+                            <input type="hidden" name="is_featured" value="0">
+                            <input
+                                type="checkbox"
+                                name="is_featured"
+                                value="1"
+                                class="rounded border-blueMid bg-blueDeep/80 text-gold focus:ring-gold"
+                                {{ old('is_featured', $specialty->is_featured) ? 'checked' : '' }}
+                            >
+                            <span>Destacada (aparece en “Prácticas más buscadas”)</span>
+                        </label>
+                    </div>
+
+                    {{-- Imagen destacada --}}
+                    <div class="space-y-2">
+                        <label class="block mb-1 text-sm font-medium text-silver/90">
+                            Imagen para tarjeta destacada
+                        </label>
+                        <input
+                            type="file"
+                            name="featured_image"
+                            accept="image/*"
+                            class="w-full text-sm text-silver file:mr-3 file:rounded-lg file:border-0
+                                   file:bg-gold/10 file:px-3 file:py-2 file:text-xs file:font-medium
+                                   file:text-gold hover:file:bg-gold/20"
+                        >
+                        @if($specialty->featured_image_path)
+                            <div class="mt-2">
+                                <p class="text-[11px] text-silver/60 mb-1">Imagen actual:</p>
+                                <img src="{{ asset('storage/'.$specialty->featured_image_path) }}"
+                                     class="h-20 rounded-xl border border-blueMid object-cover">
+                            </div>
+                        @endif
                     </div>
 
                     <div class="flex gap-3 mt-2">

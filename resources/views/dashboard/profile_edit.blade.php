@@ -6,6 +6,9 @@
     @php
         // Bloqueo si hay edición pendiente
         $locked = isset($pendingEdit) && $pendingEdit;
+
+        // Texto guardado de ubicación (lo que eligió el provider)
+        $savedLocationLabel = old('location_label', $profile->location_label ?? null);
     @endphp
 
     <div class="py-10 bg-blueDeep">
@@ -100,7 +103,7 @@
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-silver mb-1">Nombre público</label>
                                 <input name="display_name"
-                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/40"
+                                       class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                        value="{{ old('display_name', $profile->display_name) }}"
                                        {{ $locked ? 'disabled' : '' }}>
                             </div>
@@ -140,7 +143,7 @@
                                          class="space-y-2">
                                         <input type="text"
                                                id="specialty-search"
-                                               class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                               class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                                placeholder="Escribí para buscar especialidades..."
                                                {{ $locked ? 'disabled' : '' }}>
 
@@ -196,7 +199,7 @@
                                         : ($profile->mode_remote ? 'remoto' : 'presencial');
                                 @endphp
                                 <select name="modality"
-                                        class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                        class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                         {{ $locked ? 'disabled' : '' }}>
                                     <option value="remoto" {{ old('modality',$currentMod)==='remoto' ? 'selected' : '' }}>Remoto</option>
                                     <option value="ambas" {{ old('modality',$currentMod)==='ambas' ? 'selected' : '' }}>Remoto y presencial</option>
@@ -233,9 +236,10 @@
                                 <div class="ac-wrap">
                                     <div class="flex gap-2">
                                         <input id="loc_input"
-                                               class="flex-1 rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                               class="flex-1 rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                                autocomplete="off"
                                                placeholder="Ciudad, provincia o dirección…"
+                                               value="{{ $savedLocationLabel ?? '' }}"
                                                {{ $locked ? 'disabled' : '' }}>
                                         <button type="button" id="btn_myloc"
                                                 class="inline-flex items-center rounded-xl border border-blueMid bg-blueNight/40 px-3 py-2 text-xs font-medium text-silver hover:bg-blueNight/70 disabled:opacity-50"
@@ -245,12 +249,19 @@
                                     </div>
                                     <div id="loc_list" class="ac-list hidden"></div>
                                 </div>
-                                <div class="text-xs text-silver/60" id="coords_hint" style="display:none"></div>
 
+                                {{-- Coordenadas (ocultas) --}}
                                 <input type="hidden" name="lat" id="lat" value="{{ old('lat', $profile->lat) }}">
                                 <input type="hidden" name="lng" id="lng" value="{{ old('lng', $profile->lng) }}">
+
+                                {{-- Texto exacto elegido --}}
+                                <input type="hidden"
+                                       name="location_label"
+                                       id="location_label"
+                                       value="{{ $savedLocationLabel ?? '' }}">
                             </div>
 
+                            {{-- Campos auxiliares ocultos (país / estado / ciudad / dirección) --}}
                             <div class="hidden md:grid-cols-3 gap-4 mt-3 md:col-span-2">
                                 <div>
                                     <label class="block text-xs font-medium text-silver/70 mb-1">País (ISO-2)</label>
@@ -276,10 +287,6 @@
                                 <input name="address" id="address"
                                        class="w-full rounded-lg border border-blueMid bg-blueNight/40 px-3 py-2 text-xs text-silver"
                                        value="{{ old('address',$profile->address) }}" readonly>
-                                <p class="text-[11px] text-silver/60 mt-1">
-                                    Coordenadas:
-                                    <span id="latlngText">{{ old('lat', $profile->lat) }}, {{ old('lng', $profile->lng) }}</span>
-                                </p>
                             </div>
                         </div>
                     </section>
@@ -295,7 +302,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-silver mb-1">WhatsApp</label>
                                 <input name="whatsapp"
-                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                       class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                        placeholder="+54 9 11 5555-5555"
                                        value="{{ old('whatsapp', $profile->whatsapp) }}"
                                        {{ $locked ? 'disabled' : '' }}>
@@ -308,7 +315,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-silver mb-1">Correo</label>
                                 <input name="contact_email" type="email"
-                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                       class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                        placeholder="tucorreo@dominio.com"
                                        value="{{ old('contact_email', $profile->contact_email) }}"
                                        {{ $locked ? 'disabled' : '' }}>
@@ -357,7 +364,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-silver mb-1">Video (URL)</label>
                                 <input name="video_url"
-                                       class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                       class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                        placeholder="https://www.youtube.com/watch?v=..."
                                        value="{{ old('video_url', $profile->video_url) }}"
                                        {{ $locked ? 'disabled' : '' }}>
@@ -367,7 +374,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-silver mb-1">Template</label>
                                 <select name="template_key"
-                                        class="w-full rounded-xl border border-blueMid bg-blueNight/60 px-3 py-2.5 text-sm text-silver shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30"
+                                        class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
                                         {{ $locked ? 'disabled' : '' }}>
                                     <option value="a" {{ old('template_key',$profile->template_key)==='a' ? 'selected' : '' }}>Template A</option>
                                     <option value="b" {{ old('template_key',$profile->template_key)==='b' ? 'selected' : '' }}>Template B</option>
@@ -390,99 +397,241 @@
 
     {{-- Autocompletado (Nominatim / OpenStreetMap) --}}
     <script>
-    (function(){
-      const locked = @json($locked);
-      if (locked) return;
+        (function () {
+            const locked = @json($locked);
+            if (locked) return;
 
-      const $ = s => document.querySelector(s);
-      const locInput = $('#loc_input');
-      const list = $('#loc_list');
-      const myBtn = $('#btn_myloc');
-      const latEl = $('#lat'), lngEl = $('#lng');
-      const countryEl = $('#country'), stateEl = $('#state'), cityEl = $('#city'), addrEl = $('#address');
-      const hint = $('#coords_hint');
-      const latlngTxt = $('#latlngText');
+            const $          = s => document.querySelector(s);
+            const locInput   = $('#loc_input');
+            const list       = $('#loc_list');
+            const myBtn      = $('#btn_myloc');
 
-      let t=null; const debounce=(fn,ms=250)=>{ clearTimeout(t); t=setTimeout(fn,ms); };
+            const latEl      = $('#lat');
+            const lngEl      = $('#lng');
+            const locLabelEl = $('#location_label');
 
-      function setLatLng(lat,lng){
-        if(typeof lat==='undefined' || typeof lng==='undefined') return;
-        latEl.value = Number(lat).toFixed(7);
-        lngEl.value = Number(lng).toFixed(7);
-        latlngTxt.textContent = `${latEl.value}, ${lngEl.value}`;
-        hint.style.display = 'block';
-        hint.textContent = `Coordenadas: ${latEl.value}, ${lngEl.value}`;
-      }
+            const countryEl  = $('#country');
+            const stateEl    = $('#state');
+            const cityEl     = $('#city');
+            const addrEl     = $('#address');
 
-      function render(items){
-        if(!items || !items.length){ list.classList.add('hidden'); list.innerHTML=''; return; }
-        list.innerHTML = items.map(it =>
-          `<div class="ac-item" data-item='${JSON.stringify(it).replaceAll("'", "&#39;")}'>
-             ${it.display_name}
-           </div>`).join('');
-        list.classList.remove('hidden');
-      }
+            if (!locInput || !list) return;
 
-      async function search(q){
-        if(!q || q.length<3){ render([]); return; }
-        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=es&q=${encodeURIComponent(q)}`;
-        try{
-          const r = await fetch(url, {headers:{'Accept':'application/json'}});
-          const data = await r.json();
-          render(data);
-        }catch{ render([]); }
-      }
+            let t = null;
+            const debounce = (fn, ms = 250) => {
+                clearTimeout(t);
+                t = setTimeout(fn, ms);
+            };
 
-      function choose(item){
-        setLatLng(item.lat, item.lon);
+            function escapeHtml(str) {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
 
-        const a = item.address || {};
-        const city = a.city || a.town || a.village || a.hamlet || '';
-        const state = a.state || '';
-        const country = (a.country_code || '').toUpperCase();
-        const road = a.road || a.pedestrian || a.path || '';
-        const hn = a.house_number ? ` ${a.house_number}` : '';
-        const fullAddr = (item.type === 'house' || road) ? `${road}${hn}` : (item.display_name || '');
+            function clearLocation() {
+                locInput.value = '';
+                if (locLabelEl) locLabelEl.value = '';
+                if (latEl) latEl.value = '';
+                if (lngEl) lngEl.value = '';
+                if (countryEl) countryEl.value = '';
+                if (stateEl) stateEl.value = '';
+                if (cityEl) cityEl.value = '';
+                if (addrEl) addrEl.value = '';
+            }
 
-        countryEl.value = country;
-        stateEl.value   = state;
-        cityEl.value    = city;
-        addrEl.value    = fullAddr;
+            function setLatLng(lat, lng) {
+                if (typeof lat === 'undefined' || typeof lng === 'undefined') return;
 
-        const label = [city, state].filter(Boolean).join(', ') || fullAddr || item.display_name;
-        locInput.value = label;
+                if (latEl) latEl.value = Number(lat).toFixed(7);
+                if (lngEl) lngEl.value = Number(lng).toFixed(7);
+            }
 
-        list.classList.add('hidden'); list.innerHTML='';
-      }
+            function render(items) {
+                if (!items || !items.length) {
+                    list.classList.add('hidden');
+                    list.innerHTML = '';
+                    return;
+                }
 
-      locInput.addEventListener('input', () => debounce(() => search(locInput.value.trim()), 300));
-      document.addEventListener('click', (e) => {
-        if(e.target.closest('#loc_list .ac-item')){
-          const raw = e.target.closest('.ac-item').dataset.item;
-          choose(JSON.parse(raw));
-        } else if(!e.target.closest('#loc_list') && e.target !== locInput){
-          list.classList.add('hidden');
-        }
-      });
+                list.innerHTML = items
+                    .map(function (it) {
+                        const addr    = encodeURIComponent(JSON.stringify(it.address || {}));
+                        const display = escapeHtml(it.display_name || '');
+                        const type    = it.type ? escapeHtml(it.type) : '';
 
-      myBtn.addEventListener('click', () => {
-        if(!navigator.geolocation){ alert('Tu navegador no permite geolocalización.'); return; }
-        navigator.geolocation.getCurrentPosition(async pos=>{
-          const {latitude, longitude} = pos.coords;
-          setLatLng(latitude, longitude);
-          try{
-            const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=es`;
-            const r=await fetch(url); const j=await r.json();
-            choose({lat:latitude, lon:longitude, address:j.address||{}, display_name:j.display_name||'', type:j.type||''});
-          }catch(e){}
-        }, ()=>alert('No pudimos obtener tu ubicación.'));
-      });
+                        return (
+                            '<button type="button" class="ac-item" ' +
+                            'data-lat="' + it.lat + '" ' +
+                            'data-lon="' + it.lon + '" ' +
+                            'data-display="' + display + '" ' +
+                            'data-type="' + type + '" ' +
+                            'data-address="' + addr + '">' +
+                            display +
+                            '</button>'
+                        );
+                    })
+                    .join('');
 
-      if(latEl.value && lngEl.value){
-        hint.style.display='block';
-        hint.textContent=`Coordenadas: ${latEl.value}, ${lngEl.value}`;
-      }
-    })();
+                list.classList.remove('hidden');
+            }
+
+            async function search(q) {
+                if (!q || q.length < 3) {
+                    render([]);
+                    return;
+                }
+
+                const url =
+                    'https://nominatim.openstreetmap.org/search?' +
+                    'format=json&addressdetails=1&limit=6&accept-language=es&countrycodes=ar&q=' +
+                    encodeURIComponent(q);
+
+                try {
+                    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+                    if (!r.ok) {
+                        render([]);
+                        return;
+                    }
+                    const data = await r.json();
+                    render(data);
+                } catch (e) {
+                    render([]);
+                }
+            }
+
+            function choose(item) {
+                if (!item) return;
+
+                setLatLng(item.lat, item.lon);
+
+                const a       = item.address || {};
+                const city    = a.city || a.town || a.village || a.hamlet || '';
+                const state   = a.state || '';
+                const country = (a.country_code || '').toUpperCase();
+                const road    = a.road || a.pedestrian || a.path || '';
+                const hn      = a.house_number ? ' ' + a.house_number : '';
+                const fullAddr =
+                    item.type === 'house' || road ? (road + hn) : (item.display_name || '');
+
+                if (countryEl) countryEl.value = country;
+                if (stateEl)   stateEl.value   = state;
+                if (cityEl)    cityEl.value    = city;
+                if (addrEl)    addrEl.value    = fullAddr;
+
+                const label =
+                    item.display_name ||
+                    fullAddr ||
+                    [city, state].filter(Boolean).join(', ');
+
+                locInput.value = label;
+                if (locLabelEl) locLabelEl.value = label;
+
+                list.classList.add('hidden');
+                list.innerHTML = '';
+            }
+
+            // Buscador con debounce
+            locInput.addEventListener('input', function () {
+                const q = locInput.value.trim();
+                debounce(function () {
+                    search(q);
+                }, 300);
+            });
+
+            // Obligar a elegir sugerencia
+            locInput.addEventListener('blur', function () {
+                const typed = (locInput.value || '').trim();
+                const label =
+                    locLabelEl && locLabelEl.value ? locLabelEl.value.trim() : '';
+                if (!typed || !label || typed !== label) {
+                    clearLocation();
+                }
+            });
+
+            // Click en sugerencias
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('.ac-item');
+                if (btn && btn.closest('#loc_list')) {
+                    let addrObj = {};
+                    try {
+                        addrObj = btn.dataset.address
+                            ? JSON.parse(decodeURIComponent(btn.dataset.address))
+                            : {};
+                    } catch (err) {
+                        addrObj = {};
+                    }
+
+                    const item = {
+                        lat: parseFloat(btn.dataset.lat),
+                        lon: parseFloat(btn.dataset.lon),
+                        type: btn.dataset.type || '',
+                        display_name: btn.dataset.display || '',
+                        address: addrObj,
+                    };
+
+                    choose(item);
+                    return;
+                }
+
+                // clic fuera del dropdown
+                if (!e.target.closest('#loc_list') && e.target !== locInput) {
+                    list.classList.add('hidden');
+                }
+            });
+
+            // Botón "Mi ubicación"
+            if (myBtn) {
+                myBtn.addEventListener('click', function () {
+                    if (!navigator.geolocation) {
+                        alert('Tu navegador no permite geolocalización.');
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                        async function (pos) {
+                            const latitude  = pos.coords.latitude;
+                            const longitude = pos.coords.longitude;
+                            setLatLng(latitude, longitude);
+
+                            try {
+                                const url =
+                                    'https://nominatim.openstreetmap.org/reverse?' +
+                                    'format=json&lat=' +
+                                    latitude +
+                                    '&lon=' +
+                                    longitude +
+                                    '&addressdetails=1&accept-language=es&countrycodes=ar';
+
+                                const r = await fetch(url, { headers: { Accept: 'application/json' } });
+                                if (!r.ok) return;
+                                const j = await r.json();
+
+                                choose({
+                                    lat: latitude,
+                                    lon: longitude,
+                                    address: j.address || {},
+                                    display_name: j.display_name || '',
+                                    type: j.type || '',
+                                });
+                            } catch (e) {
+                                // silencioso
+                            }
+                        },
+                        function () {
+                            alert('No pudimos obtener tu ubicación.');
+                        }
+                    );
+                });
+            }
+
+            // Si ya tenemos una etiqueta guardada, mostrarla
+            if (locLabelEl && locLabelEl.value && !locInput.value) {
+                locInput.value = locLabelEl.value;
+            }
+        })();
     </script>
 
     {{-- Widget de especialidades: buscador + chips --}}
@@ -609,4 +758,3 @@
     })();
     </script>
 @endsection
-::contentReference[oaicite:0]{index=0}

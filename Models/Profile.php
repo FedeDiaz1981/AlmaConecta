@@ -30,6 +30,7 @@ class Profile extends Model
         'approved_at',
         'whatsapp',
         'contact_email',
+        'views_count',      // 👈 nuevo campo
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Profile extends Model
         'approved_at'     => 'datetime',
         'lat'             => 'float',
         'lng'             => 'float',
+        'views_count'     => 'integer', // 👈 para tratarlo siempre como entero
     ];
 
     public function user(): BelongsTo
@@ -60,7 +62,7 @@ class Profile extends Model
      */
     public function specialties(): BelongsToMany
     {
-       return $this->belongsToMany(\App\Models\Specialty::class, 'profile_specialty');
+        return $this->belongsToMany(\App\Models\Specialty::class, 'profile_specialty');
     }
 
     /**

@@ -16,7 +16,10 @@ class ProviderProfileController extends Controller
 
         $profile = Profile::firstOrCreate(
             ['user_id' => $user->id],
-            ['display_name' => $user->name, 'slug' => Str::slug($user->name) . '-' . $user->id]
+            [
+                'display_name' => $user->name,
+                'slug'         => Str::slug($user->name) . '-' . $user->id,
+            ]
         );
 
         // edición pendiente (para bloquear el form)
@@ -33,7 +36,12 @@ class ProviderProfileController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('dashboard.profile_edit', compact('profile', 'services', 'pendingEdit', 'specialties'));
+        return view('dashboard.profile_edit', compact(
+            'profile',
+            'services',
+            'pendingEdit',
+            'specialties'
+        ));
     }
 
     public function saveDraft(Request $request)
@@ -66,6 +74,8 @@ class ProviderProfileController extends Controller
             'state'          => 'nullable|string|max:100',
             'city'           => 'nullable|string|max:100',
             'address'        => 'nullable|string|max:255',
+            // NUEVO: etiqueta exacta elegida en el autocomplete
+            'location_label' => 'nullable|string|max:255',
             // contacto
             'whatsapp'       => 'nullable|string|max:30',
             'contact_email'  => 'nullable|email|max:255',
@@ -100,6 +110,8 @@ class ProviderProfileController extends Controller
             'address'         => $data['address'] ?? null,
             'lat'             => $data['lat'] ?? null,
             'lng'             => $data['lng'] ?? null,
+            // NUEVO: guardamos el texto exacto de la ubicación
+            'location_label'  => $data['location_label'] ?? null,
             'whatsapp'        => $data['whatsapp'] ?? null,
             'contact_email'   => $data['contact_email'] ?? null,
             // NUEVO: especialidades seleccionadas
@@ -129,14 +141,19 @@ class ProviderProfileController extends Controller
             ->latest()
             ->first();
 
-        if (!$pending) {
+        if (! $pending) {
             return back()->with('status', 'No hay una petición pendiente.');
         }
 
         // limpiar foto subida si no es la actual del perfil
-        $payload = is_array($pending->payload) ? $pending->payload : (json_decode($pending->payload, true) ?? []);
+        $payload = is_array($pending->payload)
+            ? $pending->payload
+            : (json_decode($pending->payload, true) ?? []);
+
         if (!empty($payload['photo_path']) && $payload['photo_path'] !== $profile->photo_path) {
-            try { Storage::disk('public')->delete($payload['photo_path']); } catch (\Throwable $e) {}
+            try {
+                Storage::disk('public')->delete($payload['photo_path']);
+            } catch (\Throwable $e) {}
         }
 
         // Importante: respetamos el CHECK constraint (pending/approved/rejected)

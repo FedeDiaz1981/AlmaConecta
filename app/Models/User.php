@@ -10,7 +10,7 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    // Agregá todos los que vas a tocar desde el admin
+    // Campos que se pueden asignar masivamente
     protected $fillable = [
         'name',
         'email',
@@ -29,9 +29,18 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime',
-        'suspended_at' => 'datetime',
-        'activated_at' => 'datetime',
+        'approved_at'       => 'datetime',
+        'rejected_at'       => 'datetime',
+        'suspended_at'      => 'datetime',
+        'activated_at'      => 'datetime',
     ];
+
+    /**
+     * Perfil profesional asociado al usuario.
+     * Tabla: profiles, FK: user_id
+     */
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
 }

@@ -31,6 +31,8 @@
                             <th class="px-4 py-2 text-left font-semibold">Nombre</th>
                             <th class="px-4 py-2 text-left font-semibold">Slug</th>
                             <th class="px-4 py-2 text-left font-semibold">Activa</th>
+                            {{-- NUEVO: columna destacada --}}
+                            <th class="px-4 py-2 text-left font-semibold">Destacada</th>
                             <th class="px-4 py-2 text-left font-semibold">Acciones</th>
                         </tr>
                     </thead>
@@ -57,6 +59,20 @@
                                         </span>
                                     @endif
                                 </td>
+
+                                {{-- NUEVO: indicador de destacada --}}
+                                <td class="px-4 py-2">
+                                    @if($specialty->is_featured)
+                                        <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/90 text-xs font-semibold text-blueDeep">
+                                            Sí
+                                        </span>
+                                    @else
+                                        <span class="inline-flex px-2 py-1 rounded-full bg-slate-600 text-xs font-semibold text-silver">
+                                            No
+                                        </span>
+                                    @endif
+                                </td>
+
                                 <td class="px-4 py-2">
                                     <div class="flex flex-wrap gap-3 items-center">
                                         <a href="{{ route('admin.specialties.edit', $specialty) }}"
@@ -79,7 +95,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-6 text-center text-silver/70">
+                                <td colspan="6" class="px-4 py-6 text-center text-silver/70">
                                     No hay especialidades aún.
                                 </td>
                             </tr>

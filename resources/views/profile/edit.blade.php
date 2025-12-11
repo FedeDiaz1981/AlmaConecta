@@ -1,69 +1,56 @@
 @extends('layouts.app')
 
-@section('title', 'Mi cuenta')
+@section('title', 'Mi perfil')
 
 @section('content')
-    <div class="py-8">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    {{-- Overlay tipo modal ocupando la pantalla --}}
+    <div class="fixed inset-0 z-40 flex items-stretch sm:items-center justify-center bg-blueDeep/80">
 
-            {{-- Título --}}
-            <div>
-                <h1 class="text-2xl font-semibold text-silver">
-                    Mi cuenta
+        {{-- Contenedor del modal (full en mobile, tarjeta centrada en desktop) --}}
+        <div
+            class="relative w-full h-full sm:h-auto sm:max-h-[75vh] sm:w-full max-w-3xl
+                   bg-blueNight/95 border border-blueMid rounded-none sm:rounded-2xl shadow-soft
+                   overflow-y-auto mx-0 sm:mx-4 p-4 sm:p-6 lg:p-8">
+
+            {{-- Botón cerrar (esquina superior derecha) --}}
+            <button
+                type="button"
+                class="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full
+                       bg-blueDeep/80 text-silver/80 hover:bg-blueDeep hover:text-white
+                       border border-blueMid/70 text-sm"
+                onclick="if (history.length > 1) { history.back(); } else { window.location.href='{{ route('home') }}'; }"
+                aria-label="Cerrar"
+            >
+                ✕
+            </button>
+
+            {{-- Cabecera --}}
+            <div class="mb-5 sm:mb-6 pr-8"> {{-- pr-8 para que no choque con el botón cerrar --}}
+                <h1 class="text-lg sm:text-xl font-semibold text-silver">
+                    Mi perfil
                 </h1>
-                <p class="mt-1 text-sm text-silver/70">
-                    Actualizá tus datos de acceso y tu información básica de usuario.
+                <p class="mt-1 text-xs sm:text-sm text-silver/70">
+                    Estos son tus datos de cuenta (nombre, correo y acceso).
                 </p>
             </div>
 
-            {{-- Datos de perfil (nombre, email, etc.) --}}
-            <section class="bg-blueNight/80 border border-blueMid rounded-2xl shadow-soft p-5 sm:p-6">
-                <header class="mb-4">
-                    <h2 class="text-lg font-semibold text-silver">
-                        Información de perfil
-                    </h2>
-                    <p class="mt-1 text-sm text-silver/70">
-                        Estos son tus datos de cuenta (nombre y correo de acceso).
-                    </p>
-                </header>
-
-                <div class="max-w-xl">
+            {{-- Contenido --}}
+            <div class="space-y-4 sm:space-y-6">
+                {{-- Datos de la cuenta --}}
+                <div class="p-4 sm:p-6 rounded-xl border border-blueMid/60 bg-blueDeep/60">
                     @include('profile.partials.update-profile-information-form')
                 </div>
-            </section>
 
-            {{-- Cambio de contraseña --}}
-            <section class="bg-blueNight/80 border border-blueMid rounded-2xl shadow-soft p-5 sm:p-6">
-                <header class="mb-4">
-                    <h2 class="text-lg font-semibold text-silver">
-                        Cambiar contraseña
-                    </h2>
-                    <p class="mt-1 text-sm text-silver/70">
-                        Asegurate de usar una contraseña larga y segura.
-                    </p>
-                </header>
-
-                <div class="max-w-xl">
+                {{-- Cambio de contraseña --}}
+                <div class="p-4 sm:p-6 rounded-xl border border-blueMid/60 bg-blueDeep/60">
                     @include('profile.partials.update-password-form')
                 </div>
-            </section>
 
-            {{-- Eliminar cuenta --}}
-            <section class="bg-blueNight/80 border border-red-900/60 rounded-2xl shadow-soft p-5 sm:p-6">
-                <header class="mb-4">
-                    <h2 class="text-lg font-semibold text-red-300">
-                        Eliminar cuenta
-                    </h2>
-                    <p class="mt-1 text-sm text-red-200/80">
-                        Esta acción es permanente. Se eliminarán tus datos de acceso y ya no podrás ingresar.
-                    </p>
-                </header>
-
-                <div class="max-w-xl">
+                {{-- Borrar cuenta --}}
+                <div class="p-4 sm:p-6 rounded-xl border border-red-500/40 bg-red-900/20">
                     @include('profile.partials.delete-user-form')
                 </div>
-            </section>
-
+            </div>
         </div>
     </div>
 @endsection

@@ -4,8 +4,16 @@
             Información de la cuenta
         </h2>
 
+        @php
+            $isProvider = $user->role === 'provider';
+        @endphp
+
         <p class="mt-1 text-sm text-silver/80">
-            Actualizá tu nombre, correo electrónico y las especialidades con las que querés figurar.
+            @if($isProvider)
+                Actualizá tu nombre, correo electrónico y las especialidades con las que querés figurar.
+            @else
+                Actualizá tu nombre y correo electrónico de acceso.
+            @endif
         </p>
     </header>
 
@@ -78,40 +86,42 @@
             @endif
         </div>
 
-        {{-- Especialidades múltiples --}}
-        @php
-            $selectedSpecialties = old('specialties', isset($profile)
-                ? $profile->specialties->pluck('id')->toArray()
-                : []);
-        @endphp
+        {{-- Especialidades múltiples: SOLO providers --}}
+        @if($isProvider)
+            @php
+                $selectedSpecialties = old('specialties', isset($profile)
+                    ? $profile->specialties->pluck('id')->toArray()
+                    : []);
+            @endphp
 
-        <div>
-            <x-input-label
-                value="Especialidades"
-                class="text-silver/90"
-            />
+            <div>
+                <x-input-label
+                    value="Especialidades"
+                    class="text-silver/90"
+                />
 
-            <p class="mt-1 text-xs text-silver/60">
-                Podés marcar una o varias especialidades con las que quieras aparecer en Alma Conecta.
-            </p>
+                <p class="mt-1 text-xs text-silver/60">
+                    Podés marcar una o varias especialidades con las que quieras aparecer en Alma Conecta.
+                </p>
 
-            <div class="mt-3 space-y-1 max-h-64 overflow-y-auto rounded-lg border border-blueMid/60 bg-blueDeep/60 p-3">
-                @foreach($specialties as $specialty)
-                    <label class="flex items-center gap-2 text-sm text-silver/90">
-                        <input
-                            type="checkbox"
-                            name="specialties[]"
-                            value="{{ $specialty->id }}"
-                            class="rounded border-blueMid bg-blueDeep text-gold focus:ring-gold"
-                            @checked(in_array($specialty->id, $selectedSpecialties))
-                        >
-                        <span>{{ $specialty->name }}</span>
-                    </label>
-                @endforeach
+                <div class="mt-3 space-y-1 max-h-64 overflow-y-auto rounded-lg border border-blueMid/60 bg-blueDeep/60 p-3">
+                    @foreach($specialties as $specialty)
+                        <label class="flex items-center gap-2 text-sm text-silver/90">
+                            <input
+                                type="checkbox"
+                                name="specialties[]"
+                                value="{{ $specialty->id }}"
+                                class="rounded border-blueMid bg-blueDeep text-gold focus:ring-gold"
+                                @checked(in_array($specialty->id, $selectedSpecialties))
+                            >
+                            <span>{{ $specialty->name }}</span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <x-input-error class="mt-2" :messages="$errors->get('specialties')" />
             </div>
-
-            <x-input-error class="mt-2" :messages="$errors->get('specialties')" />
-        </div>
+        @endif
 
         {{-- Botón / estado --}}
         <div class="flex items-center gap-4">

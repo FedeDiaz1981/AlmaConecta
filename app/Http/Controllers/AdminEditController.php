@@ -20,7 +20,11 @@ class AdminEditController extends Controller
 
     public function index()
     {
-        $edits = Edit::with('profile')->where('status', 'pending')->latest()->paginate(20);
+        $edits = Edit::with('profile')
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(20);
+
         return view('admin.edits_index', compact('edits'));
     }
 
@@ -40,14 +44,16 @@ class AdminEditController extends Controller
                 'about'           => $payload['about'] ?? $p->about,
                 'video_url'       => $payload['video_url'] ?? $p->video_url,
                 'template_key'    => $payload['template_key'] ?? $p->template_key,
-                'mode_remote'     => (bool) ($payload['mode_remote'] ?? $p->mode_remote),
-                'mode_presential' => (bool) ($payload['mode_presential'] ?? $p->mode_presential),
+                'mode_remote'     => (bool)($payload['mode_remote'] ?? $p->mode_remote),
+                'mode_presential' => (bool)($payload['mode_presential'] ?? $p->mode_presential),
                 'country'         => $payload['country'] ?? $p->country,
                 'state'           => $payload['state'] ?? $p->state,
                 'city'            => $payload['city'] ?? $p->city,
                 'address'         => $payload['address'] ?? $p->address,
                 'lat'             => $payload['lat'] ?? $p->lat,
                 'lng'             => $payload['lng'] ?? $p->lng,
+                // 👉 NUEVO: texto exacto elegido en el autocomplete
+                'location_label'  => $payload['location_label'] ?? $p->location_label,
                 'whatsapp'        => $payload['whatsapp'] ?? $p->whatsapp,
                 'contact_email'   => $payload['contact_email'] ?? $p->contact_email,
             ]);
@@ -57,7 +63,9 @@ class AdminEditController extends Controller
                 if ($p->photo_path && $p->photo_path !== $payload['photo_path']) {
                     try {
                         Storage::disk('public')->delete($p->photo_path);
-                    } catch (\Throwable $e) {/* noop */}
+                    } catch (\Throwable $e) {
+                        // noop
+                    }
                 }
                 $p->photo_path = $payload['photo_path'];
             }
@@ -66,7 +74,7 @@ class AdminEditController extends Controller
             $p->status = 'approved';
             $p->save();
 
-            // NUEVO: sincronizar especialidades si vienen en el payload
+            // Sincronizar especialidades si vienen en el payload
             if (!empty($payload['specialties']) && is_array($payload['specialties'])) {
                 $ids = array_map('intval', $payload['specialties']);
                 $p->specialties()->sync($ids);
@@ -75,7 +83,8 @@ class AdminEditController extends Controller
             // Media (si viene en payload)
             if (isset($payload['media'])) {
                 $p->media()->delete();
-                foreach ((array) $payload['media'] as $m) {
+
+                foreach ((array)$payload['media'] as $m) {
                     if (!empty($m['url'])) {
                         $p->media()->create([
                             'type'     => $m['type'] ?? 'image',

@@ -4,13 +4,30 @@
 
 @section('content')
 
+@php
+    $heroMobile = asset('hero_lma_conecta_Mobile.png');
+    $heroDesktop = asset('hero_lma_conecta.png');
+@endphp
+
+<style>
+    .hero-bg {
+        background-size: cover;
+        background-position: top;
+        background-image: url('{{ $heroMobile }}'); /* MOBILE */
+    }
+
+    @media (min-width: 768px) {
+        .hero-bg {
+            background-image: url('{{ $heroDesktop }}'); /* DESKTOP */
+        }
+    }
+</style>
+
 {{-- ============================= --}}
 {{-- HERO / PORTADA (con imagen IA de fondo) --}}
 {{-- ============================= --}}
 <section
-    class="relative w-full min-h-[80vh] md:min-h-[95vh] text-silver bg-cover bg-top overflow-hidden"
-    style="background-image: url('{{ asset('hero_lma_conecta.png') }}');"
->
+    class="relative w-full min-h-[80vh] md:min-h-[95vh] text-silver bg-cover bg-top overflow-hidden hero-bg">
     {{-- Capa oscura para que se lea el texto --}}
     <div class="absolute inset-0 bg-black/40"></div>
 
@@ -20,10 +37,10 @@
     </div>
 
     {{-- CONTENIDO --}}
-    <div class="relative max-w-8xl mx-auto md:ml-[3%] px-6 w-full pt-20 md:pt-32 pb-12">
+    <div class="relative max-w-8xl mx-auto md:ml-[3%] px-0 w-full pt-20 md:pt-10 pb-12">
         <div class="w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
 
-            <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-4">
+            <h1 class="text-3xl md:text-[2.4rem] font-bold leading-tight mb-4">
                 Encontrá tu espacio de <span class="text-gold">bienestar holístico</span>
             </h1>
 
@@ -40,7 +57,7 @@
 
                     {{-- q: especialidad --}}
                     <div class="flex flex-col relative">
-                        <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                        <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Qué estás buscando? <span class="text-red-400">*</span>
                         </label>
 
@@ -70,7 +87,7 @@
 
                     {{-- loc --}}
                     <div class="flex flex-col relative">
-                        <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                        <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                             ¿Dónde? <span class="text-red-400">*</span>
                         </label>
 
@@ -102,7 +119,7 @@
                     {{-- radio + remoto --}}
                     <div class="flex flex-col gap-2">
                         <div class="flex flex-col">
-                            <label class="text-[16px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                            <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
                                 Área de búsqueda
                             </label>
 
@@ -115,13 +132,13 @@
                             </select>
                         </div>
 
-                        <label class="flex items-center gap-2 text-[16px] text-silver/70 text-left">
+                        <label class="flex items-center gap-2 text-[14px] text-silver/70 text-left">
                             <input type="checkbox"
                                 name="remote"
                                 value="1"
                                 class="h-4 w-4 rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
                                 {{ request()->boolean('remote', true) ? 'checked' : '' }}>
-                            <span class="text-[18px]">Incluir modalidad online/remota</span>
+                            <span class="text-[14px]">Incluir modalidad online/remota</span>
                         </label>
 
                         <button type="submit"
@@ -147,43 +164,21 @@
 
 
 {{-- ============================= --}}
-{{-- BLOQUE APP / BENEFICIOS (equivalente a “publicidad”) --}}
+{{-- BLOQUE APP / BENEFICIOS --}}
 {{-- ============================= --}}
-<section class="bg-blueNight py-12 md:py-16">
+<section class="bg-blueNight py-12 md:py-20">
     <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
 
-        {{-- Imagen / mockup app --}}
         <div class="flex justify-center md:justify-start">
-            <!--<div class="relative h-72 w-40 rounded-3xl bg-gradient-to-br from-blueMid to-blueDeep shadow-strong flex items-center justify-center">
-                 <span class="text-[11px] text-silver/70 px-4 text-center">
-                    Aquí va el mockup de la app / sitio de Alma Conecta
-                </span> 
-                
-            </div>-->
-            <h2 class="text-4xl font-semibold text-silver mb-3">
-                Si sos un un <span class="text-gold text-5xl">profesional</span>  y querés <span class="text-gold text-5xl">cargar</span> tu perfil hacé click <span class="text-gold text-5xl">acá</span>.
+            <h2 class="text-3xl font-semibold text-silver mb-3">
+                Si sos un un <span class="text-gold text-4xl">profesional</span>  y querés <span class="text-gold text-4xl">cargar</span> tu perfil hacé click <span class="text-gold text-4xl">acá</span>.
             </h2>
         </div>
 
-        {{-- Texto --}}
         <div>
-            <!--<h2 class="text-2xl font-semibold text-silver mb-3">
-                Si sos un un profesional y querés cargar tu perfil hacé click acá.
-            </h2>
-             <p class="text-sm text-silver/80 mb-4">
-                Si sos un un profesional y querés cargar tu perfil hacé click acá.
-            </p>
-
-            <ul class="space-y-2 text-sm text-silver/85 mb-6">
-                <li>• Búsqueda por especialidad y ubicación.</li>
-                <li>• Perfiles verificados y moderados.</li>
-                <li>• Modalidad presencial y remota.</li>
-            </ul> -->
-
-            {{-- CTA única --}}
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('dashboard.profile.edit') }}"
-                   class="px-5 py-2.5 rounded-full border border-gold text-gold text-2xl font-semibold hover:bg-gold/10 transition mx-auto">
+                   class="px-5 py-2.5 rounded-full border border-gold text-gold text-xl font-semibold hover:bg-gold/10 transition mx-auto">
                     Registrarme
                 </a>
             </div>
@@ -195,26 +190,100 @@
 {{-- ============================= --}}
 {{-- PRÁCTICAS MÁS BUSCADAS        --}}
 {{-- ============================= --}}
-<section class="bg-blueDeep py-12 md:py-16">
-    <div class="max-w-6xl mx-auto px-6">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-semibold text-silver">
-                Prácticas más buscadas
-            </h2>
-            <a href="{{ route('search') }}" class="text-sm text-gold hover:text-goldLight">
-                Ver todas
-            </a>
-        </div>
+<section class="bg-blueDeep py-12 md:py-[8rem] md:min-h-[20rem]">
+    <div class="max-w-[76rem] mx-auto px-6">
+       
+        @if(isset($topSpecialties) && $topSpecialties->count())
+            <div class="relative">
 
-        @if(isset($topSpecialties) && count($topSpecialties))
-            <div class="flex flex-wrap gap-3">
-                @foreach($topSpecialties as $specialty)
-                    <a href="{{ route('search', ['q' => $specialty->name]) }}"
-                       class="px-4 py-2 rounded-full bg-blueNight border border-blueMid text-silver text-xs
-                              hover:border-gold hover:text-gold transition">
-                        {{ $specialty->name }}
-                    </a>
-                @endforeach
+        {{-- Flecha izquierda --}}
+            <button id="specialty-prev"
+                    type="button"
+                    class="hidden md:flex absolute left-[-7.5rem] top-1/2 -translate-y-1/2
+                        h-20 w-20 rounded-full bg-blueNight/95
+                        text-gold shadow-soft
+                        items-center justify-center transition group">
+                <span class="inline-flex items-center justify-center text-[4rem] leading-none
+                            transition-transform duration-200 group-hover:scale-125">
+                    ‹
+                </span>
+            </button>
+
+        {{-- Flecha derecha --}}
+            <button id="specialty-next"
+                    type="button"
+                    class="hidden md:flex absolute right-[-7rem] top-1/2 -translate-y-1/2
+                        h-20 w-20 rounded-full bg-blueNight/95
+                        text-gold shadow-soft
+                        items-center justify-center transition group">
+                <span class="inline-flex items-center justify-center text-[4rem] leading-none
+                            transition-transform duration-200 group-hover:scale-125">
+                    ›
+                </span>
+            </button>
+
+
+
+                <style>
+                    #specialty-carousel::-webkit-scrollbar { display: none; }
+                </style>
+
+                <div id="specialty-carousel"
+                     class="flex gap-5 overflow-y-visible overflow-x-auto md:overflow-x-visible scroll-smooth snap-x snap-mandatory pb-2
+                            [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+
+                    @foreach($topSpecialties as $specialty)
+                        <a href="{{ route('search', ['q' => $specialty->name]) }}"
+                        class="snap-start shrink-0 relative group
+                                min-w-[260px] max-w-[80vw] md:w-[370px]
+                                h-[320px] md:h-[480px]   {{-- MÁS ALTAS para que no se corten al hacer hover --}}
+                                rounded-3xl overflow-hidden
+                                border border-blueMid/70 bg-blueNight/80
+                                transition-transform duration-300 ease-out
+                                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-strong hover:border-gold/80">
+
+                            {{-- Fondo con imagen si existe --}}
+                            @if($specialty->featured_image_path)
+                                <img
+                                    src="{{ asset('storage/'.$specialty->featured_image_path) }}"
+                                    alt="{{ $specialty->name }}"
+                                    class="absolute inset-0 w-full h-full object-cover"
+                                >
+                            @else
+                                <div class="absolute inset-0 bg-gradient-to-br from-blueNight via-blueDeep to-blueInk"></div>
+                            @endif
+
+                            {{-- Capa oscura para que no se pierda el texto --}}
+                            <div class="absolute inset-0
+                                        bg-gradient-to-b from-black/30 via-black/35 to-black/60
+                                        group-hover:from-black/25 group-hover:via-black/30 group-hover:to-black/55
+                                        transition-colors duration-300">
+                            </div>
+
+                            {{-- CONTENIDO --}}
+                            <div class="relative z-10 flex flex-col justify-between h-full p-4 md:p-5">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-4 py-1.5 rounded-full
+                                                text-[11px] md:text-xs font-semibold tracking-[0.20em]
+                                                uppercase bg-gold text-blueDeep
+                                                border border-gold/90
+                                                shadow-[0_0_14px_rgba(250,204,21,0.7)]">
+                                        ACTIVIDAD DESTACADA
+                                    </span>
+                                </div>
+
+                                <div class="flex-1 flex items-center justify-center px-2">
+                                    <h3 class="inline-block text-center text-base md:text-2xl font-semibold text-silver leading-snug
+                                            bg-blueNight/85 px-4 py-3 rounded-2xl shadow-soft">
+                                        {{ $specialty->name }}
+                                    </h3>
+                                </div>
+                            </div>
+                        </a>
+                    @endforeach
+
+
+                </div>
             </div>
         @else
             <p class="text-silver/60 text-sm">
@@ -224,15 +293,21 @@
     </div>
 </section>
 
+
+
+
 {{-- ============================= --}}
-{{-- FACILITADORES DESTACADOS      --}}
+{{-- FACILITADORES DESTACADOS --}}
 {{-- ============================= --}}
 <section class="bg-blueNight py-12 md:py-16">
     <div class="max-w-6xl mx-auto px-6">
 
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-semibold text-silver">
-                Facilitadores destacados
+            <h2 class="text-xl md:text-2xl font-semibold text-silver flex items-center gap-2">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gold/60 text-gold text-xs">
+                    ★
+                </span>
+                <span>Facilitadores destacados</span>
             </h2>
             <a href="{{ route('search') }}" class="text-sm text-gold hover:text-goldLight">
                 Ver más
@@ -241,30 +316,60 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach(($featuredProfiles ?? []) as $profile)
-                <article class="bg-blueDeep p-5 rounded-2xl shadow-soft border border-blueInk/60 transition
-                               hover:shadow-strong hover:border-gold/40">
+                <article
+                    class="group relative bg-gradient-to-b from-blueDeep/95 via-blueDeep/90 to-blueNight/95
+                           p-5 rounded-2xl shadow-soft border border-blueInk/60
+                           transition-transform duration-300 ease-out
+                           hover:-translate-y-1 hover:shadow-strong hover:border-gold/50">
+
+                    {{-- Badge top-right --}}
+                    <div class="absolute right-4 top-4 text-[10px] uppercase tracking-[0.14em]
+                                px-2 py-1 rounded-full bg-gold/10 text-gold border border-gold/40">
+                        Destacado
+                    </div>
+
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="h-12 w-12 rounded-full bg-blueNight overflow-hidden">
-                            {{-- foto de perfil si la tenés --}}
+                        {{-- Avatar --}}
+                        <div class="relative h-12 w-12 rounded-full bg-blueNight overflow-hidden flex items-center justify-center text-xs font-semibold text-gold/80 border border-gold/40">
+                            @if(!empty($profile->avatar_path))
+                                <img
+                                    src="{{ asset('storage/'.$profile->avatar_path) }}"
+                                    alt="{{ $profile->display_name }}"
+                                    class="h-full w-full object-cover"
+                                >
+                            @else
+                                @php
+                                    $initials = collect(explode(' ', $profile->display_name))
+                                        ->filter()
+                                        ->map(fn($p) => mb_substr($p, 0, 1))
+                                        ->take(2)
+                                        ->join('');
+                                @endphp
+                                <span>{{ $initials }}</span>
+                            @endif
                         </div>
-                        <div>
-                            <h3 class="text-silver font-semibold text-sm">
+
+                        <div class="min-w-0">
+                            <h3 class="text-silver font-semibold text-sm truncate">
                                 {{ $profile->display_name }}
                             </h3>
-                            <p class="text-silver/70 text-xs">
+                            <p class="text-silver/70 text-[11px] truncate">
                                 {{ $profile->specialties->pluck('name')->take(2)->join(' · ') }}
                             </p>
                         </div>
                     </div>
 
-                    <p class="text-silver/75 text-xs mb-4 line-clamp-3">
-                        {{ Str::limit($profile->about, 140) }}
+                    {{-- Detalle / about (solo texto, sin HTML visible) --}}
+                    <p class="text-silver/80 text-xs mb-4 line-clamp-3">
+                        {{ Str::limit(strip_tags($profile->about), 160) }}
                     </p>
 
-                    <div class="flex justify-between items-center text-[11px] text-silver/60">
-                        <span>{{ $profile->city }}, {{ $profile->state }}</span>
+                    <div class="flex items-center justify-between text-[11px] text-silver/60">
+                        <span class="truncate">
+                            {{ $profile->city }}, {{ $profile->state }}
+                        </span>
                         <a href="{{ route('profiles.show', $profile->slug) }}"
-                           class="font-semibold text-gold hover:text-goldLight">
+                           class="font-semibold text-gold hover:text-goldLight text-[11px] group-hover:underline">
                             Ver perfil
                         </a>
                     </div>
@@ -274,8 +379,9 @@
     </div>
 </section>
 
+
 {{-- ============================= --}}
-{{-- JS: Autocomplete especialidad + ubicación + validación --}}
+{{-- JS: Autocomplete + carrusel --}}
 {{-- ============================= --}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -297,9 +403,7 @@
             searchBtn.disabled = !(qValid && locValid);
         };
 
-        /* =======================
-         *  AUTOCOMPLETE ESPECIALIDAD
-         * ======================= */
+        // ----- AUTOCOMPLETE ESPECIALIDAD -----
         const input      = document.getElementById('q');
         const hidId      = document.getElementById('specialty_id');
         const box        = document.getElementById('q-suggestions');
@@ -371,7 +475,6 @@
                 }
             };
 
-            // Si ya viene una especialidad seleccionada, bloquear
             if (hidId.value && input.value.trim() !== '') {
                 lockInput();
             }
@@ -433,9 +536,7 @@
             });
         }
 
-        /* =======================
-         *  AUTOCOMPLETE UBICACIÓN (NOMINATIM)
-         * ======================= */
+        // ----- AUTOCOMPLETE UBICACIÓN -----
         const locInput = document.getElementById('loc');
         const latEl    = document.getElementById('lat');
         const lngEl    = document.getElementById('lng');
@@ -512,7 +613,7 @@
                     url.searchParams.set('format', 'json');
                     url.searchParams.set('limit', '6');
                     url.searchParams.set('accept-language', 'es');
-                    url.searchParams.set('countrycodes', 'ar'); // limitado a Argentina
+                    url.searchParams.set('countrycodes', 'ar');
 
                     const res = await fetch(url.toString(), {
                         headers: { 'Accept': 'application/json' }
@@ -532,7 +633,6 @@
                 }
             };
 
-            // Si ya hay una ubicación seleccionada (loc + lat + lng), bloquear
             if (locInput.value.trim() !== '' && latEl.value && lngEl.value) {
                 lockLocInput();
             }
@@ -558,7 +658,6 @@
             locInput.addEventListener('blur', () => {
                 setTimeout(() => {
                     hideLocBox();
-                    // Si no se eligió una sugerencia válida, limpiar todo
                     if (!latEl.value || !lngEl.value) {
                         locInput.value = '';
                     }
@@ -574,7 +673,24 @@
             }
         }
 
-        // Estado inicial del botón según valores que lleguen por querystring
+        // CARRUSEL PRÁCTICAS DESTACADAS
+        const spCarousel = document.getElementById('specialty-carousel');
+        const spPrev     = document.getElementById('specialty-prev');
+        const spNext     = document.getElementById('specialty-next');
+
+        if (spCarousel && spPrev && spNext) {
+            const step = 260; // px a desplazar por click
+
+            spPrev.addEventListener('click', () => {
+                spCarousel.scrollBy({ left: -step, behavior: 'smooth' });
+            });
+
+            spNext.addEventListener('click', () => {
+                spCarousel.scrollBy({ left: step, behavior: 'smooth' });
+            });
+        }
+
+
         updateSearchButtonState();
     });
 </script>

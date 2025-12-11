@@ -4,22 +4,25 @@
     <meta charset="utf-8">
     <title>@yield('title', 'Alma Conecta')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+     {{-- Favicon de la pestaña --}}
+    <link rel="icon" type="image/png" href="{{ asset('logo_sin_fondo.png') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-blueDeep text-silver min-h-screen flex flex-col">
 
-    {{-- ====================== --}}
-    {{-- HEADER TIPO WONOMA     --}}
-    {{-- ====================== --}}
+    {{-- HEADER --}}
     <header class="border-b border-blueNight/30 bg-white text-carbon">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-4">
 
             {{-- IZQUIERDA: LOGO + BUSCADOR --}}
             <div class="flex items-center gap-4 flex-1 min-w-0">
-
-                {{-- Logo texto --}}
-                <a href="{{ route('home') }}" class="flex items-baseline gap-1 whitespace-nowrap">
+                <a href="{{ route('home') }}" class="flex items-center gap-2 whitespace-nowrap">
+                    <img
+                        src="{{ asset('logo_sin_fondo.png') }}"
+                        alt="Alma Conecta"
+                        class="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    >
                     <span class="text-lg font-semibold tracking-[0.18em] uppercase text-gold">
                         ALMA
                     </span>
@@ -28,10 +31,10 @@
                     </span>
                 </a>
 
-                {{-- Buscador en header --}}
+                {{-- Buscador header (oculto por ahora) --}}
                 <form method="GET"
                       action="{{ route('search') }}"
-                      class="hidden items-stretch flex-1 max-w-md border border-gray-300 rounded-lg overflow-hidden bg-white ">
+                      class="hidden items-stretch flex-1 max-w-md border border-gray-300 rounded-lg overflow-hidden bg-white">
                     <input
                         type="text"
                         name="q"
@@ -49,39 +52,52 @@
                 </form>
             </div>
 
-            {{-- DERECHA: PAÍS + LINKS + BOTÓN --}}
-            <div class="hidden md:flex items-center gap-4 text-sm">
-
-                {{-- Selector de país (simple por ahora) --}}
-                <button type="button"
-                        class="hidden items-center gap-1 border border-gray-300 rounded-md px-2 py-1 text-xs hover:bg-gray-50">
-                    <span class="w-4 h-3 bg-gray-300 rounded-sm"></span>
-                    <span>Argentina</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none"
-                         viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M6 9l6 6 6-6" />
-                    </svg>
-                </button>
-
-                <a href="{{ route('dashboard.profile.edit') }}" class="hidden hover:text-gold whitespace-nowrap">
-                    Publicá tu espacio
-                </a>
-
-                <a href="{{ route('register') }}" class="hover:text-gold whitespace-nowrap">
-                    Registrarse
-                </a>
-
+            {{-- DERECHA: LINKS / BOTONES (DESKTOP) --}}
+            <div class="hidden md:flex items-center gap-3 text-sm">
                 @guest
+                    {{-- Invitado: un solo link → registro --}}
+                    <a href="{{ route('register') }}" class="hover:text-gold whitespace-nowrap">
+                        Publicá tu espacio
+                    </a>
+
                     <a href="{{ route('login') }}"
                        class="px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
                         Ingresar
                     </a>
                 @else
-                    <a href="{{ route('dashboard.profile.edit') }}"
-                       class="px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
+                    @php $user = auth()->user(); @endphp
+
+                    {{-- Si es provider, link a su perfil profesional (texto opcional) --}}
+                    @if($user->role === 'provider')
+                        <a href="{{ route('dashboard.profile.edit') }}"
+                           class="hidden lg:inline hover:text-gold whitespace-nowrap">
+                            Publicá tu espacio
+                        </a>
+                    @endif
+
+                    {{-- Si es admin, botón para volver al dashboard --}}
+                    @if($user->role === 'admin')
+                        <a href="{{ route('admin.dashboard') }}"
+                           class="px-3 py-1.5 rounded-md border border-gold/60 bg-gold/10 text-xs font-semibold text-blueDeep hover:bg-gold/30 whitespace-nowrap">
+                            Panel admin
+                        </a>
+                    @endif
+
+                    {{-- Mi cuenta → abre modal de perfil --}}
+                    <button type="button"
+                            id="openProfileModal"
+                            class="px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
                         Mi cuenta
-                    </a>
+                    </button>
+
+                    {{-- Cerrar sesión --}}
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit"
+                                class="px-3 py-1.5 rounded-md border border-blueNight/30 text-xs text-blueNight hover:bg-blueNight/5 whitespace-nowrap">
+                            Cerrar sesión
+                        </button>
+                    </form>
                 @endguest
             </div>
 
@@ -97,7 +113,7 @@
             </button>
         </div>
 
-        {{-- MENÚ MOBILE (incluye buscador + links) --}}
+        {{-- MENÚ MOBILE --}}
         <div id="mobileNav" class="md:hidden hidden border-t border-gray-200 bg-white text-carbon">
             <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 text-sm">
 
@@ -128,24 +144,48 @@
                         <span>Argentina</span>
                     </button>
 
-                    <a href="{{ route('dashboard.profile.edit') }}" class="hover:text-gold">
-                        Publicá tu espacio
-                    </a>
-
-                    <a href="{{ route('register') }}" class="hover:text-gold">
-                        Registrarse
-                    </a>
-
                     @guest
+                        {{-- Invitado: un solo link → registro --}}
+                        <a href="{{ route('register') }}" class="hover:text-gold">
+                            Publicá tu espacio
+                        </a>
+
                         <a href="{{ route('login') }}"
                            class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
                             Ingresar
                         </a>
                     @else
-                        <a href="{{ route('dashboard.profile.edit') }}"
-                           class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
+                        @php $user = auth()->user(); @endphp
+
+                        @if($user->role === 'provider')
+                            <a href="{{ route('dashboard.profile.edit') }}" class="hover:text-gold">
+                                Publicá tu espacio
+                            </a>
+                        @endif
+
+                        {{-- Botón Panel admin en mobile --}}
+                        @if($user->role === 'admin')
+                            <a href="{{ route('admin.dashboard') }}
+                               " class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-gold/60 bg-gold/10 text-xs font-semibold text-blueDeep hover:bg-gold/30 mt-1">
+                                Panel admin
+                            </a>
+                        @endif
+
+                        {{-- Mi cuenta (abre modal) --}}
+                        <button type="button"
+                                id="openProfileModalMobile"
+                                class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong mt-1">
                             Mi cuenta
-                        </a>
+                        </button>
+
+                        {{-- Cerrar sesión --}}
+                        <form method="POST" action="{{ route('logout') }}" class="mt-1">
+                            @csrf
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-blueNight/30 text-xs text-blueNight hover:bg-blueNight/5">
+                                Cerrar sesión
+                            </button>
+                        </form>
                     @endguest
                 </div>
             </div>
@@ -157,7 +197,7 @@
         @yield('content')
     </main>
 
-    {{-- FOOTER (lo dejamos como estaba o lo ajustamos después) --}}
+    {{-- FOOTER --}}
     <footer class="border-t border-blueNight/60 bg-blueDeep pt-10 pb-6 mt-10 text-xs text-silver/70">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row justify-between gap-3">
             <span>© {{ date('Y') }} Alma Conecta. Todos los derechos reservados.</span>
@@ -165,12 +205,71 @@
         </div>
     </footer>
 
+    {{-- MODAL PERFIL (reutiliza las vistas de Breeze) --}}
+    @auth
+        <div id="profileModal"
+             class="fixed inset-0 z-40 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div class="w-full max-w-lg mx-4 bg-blueNight border border-blueMid rounded-2xl shadow-soft overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-blueMid/60">
+                    <h2 class="text-sm font-semibold text-silver">
+                        Información de perfil
+                    </h2>
+                    <button type="button" id="closeProfileModal" class="text-silver/60 hover:text-silver text-sm">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="max-h-[80vh] overflow-y-auto p-4 sm:p-6">
+                    {{-- Reutilizamos la vista de edición de perfil estándar --}}
+                    @include('profile.partials.update-profile-information-form', [
+                        'user' => auth()->user(),
+                        'profile' => $profile ?? null,
+                        'specialties' => auth()->user()->role === 'admin' ? collect() : ($specialties ?? collect()),
+                    ])
+
+                    <div class="mt-8 border-t border-blueMid/60 pt-4">
+                        @include('profile.partials.update-password-form')
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endauth
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('menuToggle');
             const nav = document.getElementById('mobileNav');
-            if (!btn || !nav) return;
-            btn.addEventListener('click', () => nav.classList.toggle('hidden'));
+            if (btn && nav) {
+                btn.addEventListener('click', () => nav.classList.toggle('hidden'));
+            }
+
+            const modal    = document.getElementById('profileModal');
+            const openDesk = document.getElementById('openProfileModal');
+            const openMob  = document.getElementById('openProfileModalMobile');
+            const closeBtn = document.getElementById('closeProfileModal');
+
+            function openModal() {
+                if (!modal) return;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            function closeModal() {
+                if (!modal) return;
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            openDesk && openDesk.addEventListener('click', openModal);
+            openMob  && openMob.addEventListener('click', openModal);
+            closeBtn && closeBtn.addEventListener('click', closeModal);
+
+            modal && modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeModal();
+            });
         });
     </script>
 </body>

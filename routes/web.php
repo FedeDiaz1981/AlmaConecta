@@ -6,22 +6,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+
 use App\Models\User;
 use App\Models\Specialty;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ProviderProfileController;
+use App\Http\Controllers\HomeController; // ⬅️ HomeController
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
 use App\Http\Controllers\AdminEditController;
-
-
-
+use App\Http\Controllers\Admin\ApprovalOverviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,23 +42,23 @@ $safe = function ($action) {
 
 /*
 |--------------------------------------------------------------------------
-| Diagnóstico
+| Diagnóstico / utilidades
 |--------------------------------------------------------------------------
 */
-Route::get('/whoami', fn() => auth()->check()
+Route::get('/whoami', fn () => auth()->check()
     ? auth()->user()->only(['id', 'email', 'role', 'account_status'])
     : ['guest' => true]);
 
-Route::middleware('auth')->get('/admin-test', fn() => [
-    'user' => auth()->user()->only(['email', 'role', 'account_status']),
+Route::middleware('auth')->get('/admin-test', fn () => [
+    'user'         => auth()->user()->only(['email', 'role', 'account_status']),
     'allows_admin' => Gate::allows('admin'),
 ]);
 
 // Healthcheck para Render/monitoreo
 Route::get('/healthz', function () {
-    $db = 'down';
+    $db         = 'down';
     $migrations = null;
-    $pivotId = null;
+    $pivotId    = null;
     $pivotCount = null;
 
     try {
@@ -85,11 +84,11 @@ Route::get('/healthz', function () {
     }
 
     return response()->json([
-        'ok' => $db === 'up',
-        'app_env' => config('app.env'),
-        'db' => $db,
-        'migrations' => $migrations,
-        'pivot_id' => $pivotId,
+        'ok'          => $db === 'up',
+        'app_env'     => config('app.env'),
+        'db'          => $db,
+        'migrations'  => $migrations,
+        'pivot_id'    => $pivotId,
         'pivot_count' => $pivotCount,
     ], $db === 'up' ? 200 : 503);
 });
@@ -99,13 +98,17 @@ Route::get('/__log', function () {
     if (!config('app.debug')) {
         abort(404);
     }
+
     $path = storage_path('logs/laravel.log');
     if (!is_file($path)) {
-        return response("No hay laravel.log aún.", 200);
+        return response('No hay laravel.log aún.', 200);
     }
+
     $content = @file_get_contents($path);
-    $tail = Str::of($content)->substr(-20000);
-    return response("<pre>" . e($tail) . "</pre>", 200)->header('Content-Type', 'text/html');
+    $tail    = Str::of($content)->substr(-20000);
+
+    return response('<pre>' . e($tail) . '</pre>', 200)
+        ->header('Content-Type', 'text/html');
 });
 
 // Diagnóstico del pivot (solo lectura)
@@ -114,46 +117,45 @@ Route::get('/diag/pivot', function () use ($safe) {
         if (!Schema::hasTable('profile_service')) {
             return response()->json(['exists' => false], 200);
         }
+
         return response()->json([
-            'exists' => true,
+            'exists'     => true,
             'has_id_col' => Schema::hasColumn('profile_service', 'id'),
-            'sample' => DB::table('profile_service')->limit(5)->get(['profile_id', 'service_id']),
+            'sample'     => DB::table('profile_service')->limit(5)->get(['profile_id', 'service_id']),
         ], 200);
     });
 });
 
 /*
 |--------------------------------------------------------------------------
-| *** Ruta temporal para crear/promover ADMIN (opción A) ***
-| Requiere envs: ADMIN_SEED_TOKEN, ADMIN_EMAIL, ADMIN_PASSWORD
-| Usar 1 vez y luego borrar esta ruta del código.
+| Ruta temporal para crear/promover ADMIN
 |--------------------------------------------------------------------------
 */
 Route::get('/__seed-admin', function (Request $r) use ($safe) {
     return $safe(function () use ($r) {
-        $token = $r->query('token');
+        $token    = $r->query('token');
         $expected = env('ADMIN_SEED_TOKEN');
         abort_unless($token && $expected && hash_equals($expected, $token), 403, 'Forbidden');
 
         $email = env('ADMIN_EMAIL');
-        $pass = env('ADMIN_PASSWORD');
+        $pass  = env('ADMIN_PASSWORD');
         abort_unless($email && $pass, 422, 'Faltan ADMIN_EMAIL o ADMIN_PASSWORD');
 
         $user = User::updateOrCreate(
             ['email' => $email],
             [
-                'name' => 'Admin',
-                'password' => Hash::make($pass),
-                'role' => 'admin',
-                'account_status' => 'active',
+                'name'              => 'Admin',
+                'password'          => Hash::make($pass),
+                'role'              => 'admin',
+                'account_status'    => 'active',
                 'email_verified_at' => now(),
             ]
         );
 
         return response()->json([
-            'ok' => true,
-            'id' => $user->id,
-            'email' => $user->email,
+            'ok'    => true,
+            'id'    => $user->id,
+            'email'=> $user->email,
             'role' => $user->role,
         ]);
     });
@@ -164,14 +166,13 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
 | Público
 |--------------------------------------------------------------------------
 |
-| Tip: si BYPASS_HOME=1 (env), devolvemos una página mínima para aislar
-| errores del SearchController/blade mientras depurás.
+| Con BYPASS_HOME=1 devolvemos una página mínima.
 |
 */
 Route::get('/', function () use ($safe) {
     if (env('BYPASS_HOME', false)) {
         try {
-            $now = DB::select('select now() as now');
+            $now   = DB::select('select now() as now');
             $dbNow = $now[0]->now ?? null;
         } catch (\Throwable $e) {
             $dbNow = 'db-error: ' . $e->getMessage();
@@ -183,25 +184,23 @@ Route::get('/', function () use ($safe) {
         ], 200);
     }
 
-    return $safe(fn() => app(SearchController::class)->home(request()));
+    // Home “real” usando el HomeController
+    return $safe(fn () => app(HomeController::class)->index());
 })->name('home');
 
 // Búsqueda (GET)
 Route::get('/search', function () use ($safe) {
-    return $safe(fn() => app(SearchController::class)->search(request()));
+    return $safe(fn () => app(SearchController::class)->search(request()));
 })->name('search');
 
-// Perfil público por slug (pasando también el Request)
-// Route::get('/p/{slug}', function (string $slug) use ($safe) {
-//     return $safe(fn () => app(SearchController::class)->show(request(), $slug));
-// })->where('slug', '[A-Za-z0-9\-]+')->name('profiles.show');
-Route::get('/p/{slug}', [\App\Http\Controllers\SearchController::class, 'show'])
+// Perfil público por slug
+Route::get('/p/{slug}', [SearchController::class, 'show'])
     ->where('slug', '[A-Za-z0-9\-]+')
     ->name('profiles.show');
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard
+| Dashboard (selector según rol)
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function () {
@@ -220,10 +219,9 @@ Route::get('/dashboard', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Specialties suggest
+| Specialties suggest (AJAX)
 |--------------------------------------------------------------------------
 */
-
 Route::get('/specialties/suggest', function (Request $request) {
     $term = trim($request->get('q', ''));
 
@@ -242,7 +240,7 @@ Route::get('/specialties/suggest', function (Request $request) {
 
 /*
 |--------------------------------------------------------------------------
-| Área autenticada
+| Área autenticada (no admin)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
@@ -251,22 +249,27 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Perfil profesional
+    // Perfil profesional (proveedor)
     Route::get('/dashboard/profile', [ProviderProfileController::class, 'edit'])->name('dashboard.profile.edit');
     Route::post('/dashboard/profile', [ProviderProfileController::class, 'saveDraft'])->name('dashboard.profile.save');
     Route::post('/dashboard/profile/cancel', [ProviderProfileController::class, 'cancelPending'])->name('dashboard.profile.cancel');
 });
 
 /*
-|--------------------------------------------------------------------------|
+|--------------------------------------------------------------------------
 | Admin
-|--------------------------------------------------------------------------|
+|--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'can:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        // Dashboard admin
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Gestión unificada de aprobaciones
+        Route::get('/approvals', [ApprovalOverviewController::class, 'index'])
+            ->name('approvals.index');
 
         // Gestión de usuarios
         Route::get('/users', [UserApprovalController::class, 'index'])->name('users.index');
@@ -281,9 +284,10 @@ Route::middleware(['auth', 'can:admin'])
         Route::post('/edits/{edit}/approve', [AdminEditController::class, 'approve'])->name('edits.approve');
         Route::post('/edits/{edit}/reject', [AdminEditController::class, 'reject'])->name('edits.reject');
 
-        // 📌 NUEVO → ABM de especialidades (disciplinas)
+        // ABM de especialidades
         Route::resource('specialties', \App\Http\Controllers\Admin\SpecialtyController::class)
             ->except(['show']);
+
         Route::get('specialties/bulk', [\App\Http\Controllers\Admin\SpecialtyController::class, 'bulkForm'])
             ->name('specialties.bulk');
 
@@ -291,12 +295,9 @@ Route::middleware(['auth', 'can:admin'])
             ->name('specialties.bulk.store');
     });
 
-
 /*
 |--------------------------------------------------------------------------
 | Auth (Breeze/Laravel)
 |--------------------------------------------------------------------------
-| Aquí se registran: GET /login, POST /login, GET /register, POST /register,
-| POST /logout, Forgot Password, etc.
 */
 require __DIR__ . '/auth.php';
