@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserApprovalController extends Controller
 {
@@ -42,13 +43,46 @@ class UserApprovalController extends Controller
 
     /**
      * Aprobar cuenta.
+     * ✅ FIX DEFINITIVO: crear Profile si no existe.
      */
     public function approve(User $user)
     {
-        $user->update([
-            'account_status' => 'active',
-            'approved_at'    => now(),
-        ]);
+        DB::transaction(function () use ($user) {
+            $user->update([
+                'account_status' => 'active',
+                'approved_at'    => now(),
+            ]);
+
+            // Crear perfil para providers (si no existe).
+            // Esto evita el caso donde el provider entra al dashboard y "no impacta" nada
+            // porque no había profile, o se pierden province/city/address al postear.
+            if (($user->role ?? null) === 'provider') {
+                $baseSlug = Str::slug($user->name) . '-' . $user->id;
+
+                // Aseguramos slug único, por si había datos raros
+                $slug = $baseSlug;
+                $i = 1;
+                while (Profile::where('slug', $slug)->where('user_id', '<>', $user->id)->exists()) {
+                    $slug = $baseSlug . '-' . $i;
+                    $i++;
+                }
+
+                Profile::firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'display_name' => $user->name,
+                        'slug'         => $slug,
+                        // Elegí el estado según tu flujo:
+                        // - si querés que quede publicado de entrada:
+                        'status'       => 'approved',
+                        'approved_at'  => now(),
+                        // defaults sanos
+                        'country'      => 'AR',
+                        // si tu schema tiene mode_presential/mode_remote por defecto, no hace falta setearlos
+                    ]
+                );
+            }
+        });
 
         // Opcional: enviar e-mail
         // Mail::to($user->email)->send(new \App\Mail\GenericNotification('Cuenta aprobada', ['Tu cuenta fue aprobada.']));

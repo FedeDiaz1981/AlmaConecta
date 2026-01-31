@@ -82,7 +82,16 @@
                             </h1>
 
                             <div class="mt-1 text-sm text-silver/75 flex flex-wrap gap-x-2 gap-y-1">
-                                <span>{{ $profile->service->name ?? 'Sin especialidad' }}</span>
+                                <span>
+                                    @if($profile->specialties && $profile->specialties->count())
+                                        {{ $profile->specialties->pluck('name')->take(2)->join(' · ') }}
+                                        @if($profile->specialties->count() > 2)
+                                            <span class="opacity-70">+{{ $profile->specialties->count() - 2 }}</span>
+                                        @endif
+                                    @else
+                                        Sin especialidad
+                                    @endif
+                                </span>
 
                                 @if($profile->city || $profile->state)
                                     <span class="opacity-60">·</span>

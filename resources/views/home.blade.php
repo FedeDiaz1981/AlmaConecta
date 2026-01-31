@@ -76,57 +76,42 @@
                                 ✕
                             </button>
                         </div>
-
-                        {{-- Eliminado: specialty_id + dropdown de sugerencias --}}
                     </div>
 
-                    {{-- loc --}}
-                    <div class="flex flex-col relative">
-                        <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                            ¿Dónde? <span class="text-red-400">*</span>
-                        </label>
+                    {{-- Provincia + Ciudad (cascada) --}}
+                    <div class="flex flex-col gap-4">
 
-                        <div class="relative">
-                            <input type="text"
-                                name="loc"
-                                id="loc"
-                                autocomplete="off"
-                                required
-                                placeholder="Ciudad o barrio"
-                                value="{{ request('loc') }}"
-                                class="hero-input pr-9">
-
-                            <button type="button" id="loc-clear"
-                                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
-                                ✕
-                            </button>
-                        </div>
-
-                        <input type="hidden" id="lat" name="lat" value="{{ request('lat') }}">
-                        <input type="hidden" id="lng" name="lng" value="{{ request('lng') }}">
-
-                        <div id="loc-suggestions"
-                            class="absolute left-0 right-0 top-full mt-1 bg-blueNight border border-blueMid rounded-xl shadow-soft
-                                    max-h-56 overflow-auto text-sm hidden z-20">
-                        </div>
-                    </div>
-
-                    {{-- radio + remoto --}}
-                    <div class="flex flex-col gap-2">
-                        <div class="flex flex-col">
+                        {{-- Provincia --}}
+                        <div class="flex flex-col relative">
                             <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                                Área de búsqueda
+                                Provincia <span class="text-red-400">*</span>
                             </label>
 
-                            <select name="r" class="hero-input">
-                                @foreach([5, 10, 20, 50, 100] as $radius)
-                                    <option value="{{ $radius }}" {{ (int)request('r', 20) === $radius ? 'selected' : '' }}>
-                                        Hasta {{ $radius }} km
-                                    </option>
-                                @endforeach
+                            <select id="provinciaSelect" class="hero-input">
+                                <option value="">Cargando provincias…</option>
                             </select>
                         </div>
 
+                        {{-- Ciudad --}}
+                        <div class="flex flex-col relative">
+                            <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
+                                Ciudad <span class="text-red-400">*</span>
+                            </label>
+
+                            <select id="ciudadSelect" class="hero-input" disabled>
+                                <option value="">Primero elegí una provincia</option>
+                            </select>
+                        </div>
+
+                        {{-- Hidden: ids + nombres (para búsqueda / UI) --}}
+                        <input type="hidden" name="province_id" id="province_id" value="{{ request('province_id') }}">
+                        <input type="hidden" name="province_name" id="province_name" value="{{ request('province_name') }}">
+                        <input type="hidden" name="city_id" id="city_id" value="{{ request('city_id') }}">
+                        <input type="hidden" name="city_name" id="city_name" value="{{ request('city_name') }}">
+                    </div>
+
+                    {{-- remoto + buscar --}}
+                    <div class="flex flex-col gap-2">
                         <label class="flex items-center gap-2 text-[14px] text-silver/70 text-left">
                             <input type="checkbox"
                                 name="remote"
@@ -365,6 +350,7 @@
         </div>
     </div>
 </section>
+
 {{-- MODAL VALIDACIÓN --}}
 <div id="validation-modal"
      class="fixed inset-0 hidden z-50">
@@ -387,9 +373,10 @@
             </button>
         </div>
     </div>
+</div>
 
 {{-- ============================= --}}
-{{-- JS: Ubicación + carrusel --}}
+{{-- JS: Cascada Provincia/Ciudad + validación --}}
 {{-- ============================= --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -400,17 +387,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const qInput  = document.getElementById('q');
     const qClear  = document.getElementById('q-clear');
 
-    const locInput = document.getElementById('loc');
-    const latEl    = document.getElementById('lat');
-    const lngEl    = document.getElementById('lng');
-    const locBox   = document.getElementById('loc-suggestions');
-    const locClear = document.getElementById('loc-clear');
+    const provinciaSelect = document.getElementById('provinciaSelect');
+    const ciudadSelect    = document.getElementById('ciudadSelect');
+
+    const provinceIdEl    = document.getElementById('province_id');
+    const provinceNameEl  = document.getElementById('province_name');
+    const cityIdEl        = document.getElementById('city_id');
+    const cityNameEl      = document.getElementById('city_name');
 
     // Modal
     const modal      = document.getElementById('validation-modal');
     const modalMsg   = document.getElementById('validation-modal-msg');
     const modalClose = document.getElementById('validation-modal-close');
-    const modalGo    = document.getElementById('validation-modal-go');
 
     let lastMissingField = null;
 
@@ -428,14 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (modalClose) modalClose.addEventListener('click', hideModal);
-    if (modalGo) {
-        modalGo.addEventListener('click', () => {
-            hideModal();
-            if (lastMissingField) lastMissingField.focus();
-        });
-    }
     if (modal) {
         modal.addEventListener('click', (e) => {
+            // click fuera del panel
             if (e.target === modal) hideModal();
         });
     }
@@ -444,11 +427,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!qInput || qInput.value.trim() === '') {
             return { msg: 'Completá “¿Qué estás buscando?”.', field: qInput };
         }
-        if (!locInput || locInput.value.trim() === '') {
-            return { msg: 'Completá “¿Dónde?”.', field: locInput };
+        if (!provinceIdEl?.value) {
+            return { msg: 'Elegí una provincia.', field: provinciaSelect };
         }
-        if (!latEl?.value || !lngEl?.value) {
-            return { msg: 'Elegí una ubicación de las sugerencias para fijar coordenadas.', field: locInput };
+        if (!cityIdEl?.value) {
+            return { msg: 'Elegí una ciudad.', field: ciudadSelect };
         }
         return null;
     };
@@ -471,31 +454,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (missing) {
                 e.preventDefault();
                 showModal(missing.msg, missing.field);
+                if (missing.field) missing.field.focus?.();
             }
         });
     }
 
-    // SUBMIT de seguridad (por si algo dispara submit)
+    // SUBMIT de seguridad
     if (form) {
         form.addEventListener('submit', (e) => {
             const missing = getMissing();
             if (missing) {
                 e.preventDefault();
                 showModal(missing.msg, missing.field);
+                if (missing.field) missing.field.focus?.();
             }
         });
     }
 
     // ===== ENTER → CLICK EN BUSCAR =====
-    [qInput, locInput].forEach(input => {
-        if (!input) return;
-        input.addEventListener('keydown', (e) => {
+    // (acá solo aplica al input q; los selects ya navegan con teclado)
+    if (qInput) {
+        qInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();          // evita submit automático
-                if (searchBtn) searchBtn.click(); // MISMO flujo que click
+                e.preventDefault();
+                if (searchBtn) searchBtn.click();
             }
         });
-    });
+    }
 
     // ----- Q (texto libre) -----
     if (qInput) {
@@ -521,118 +506,131 @@ document.addEventListener('DOMContentLoaded', () => {
         syncQClear();
     }
 
-    // ----- AUTOCOMPLETE UBICACIÓN -----
-    if (locInput && latEl && lngEl && locBox) {
-        let locTimeout = null;
+    // ----- Cascada Provincia/Ciudad -----
+    const resetCity = (placeholder = 'Primero elegí una provincia') => {
+        if (!ciudadSelect) return;
+        ciudadSelect.innerHTML = `<option value="">${placeholder}</option>`;
+        ciudadSelect.disabled = true;
 
-        const hideLocBox = () => {
-            locBox.classList.add('hidden');
-            locBox.innerHTML = '';
-        };
+        if (cityIdEl) cityIdEl.value = '';
+        if (cityNameEl) cityNameEl.value = '';
+        updateSearchButtonState();
+    };
 
-        const lockLocInput = () => {
-            locInput.readOnly = true;
-            locInput.classList.add('cursor-default');
-            if (locClear) locClear.classList.remove('hidden');
-            updateSearchButtonState();
-        };
-
-        const unlockLocInput = () => {
-            locInput.readOnly = false;
-            locInput.value = '';
-            latEl.value = '';
-            lngEl.value = '';
-            locInput.classList.remove('cursor-default');
-            if (locClear) locClear.classList.add('hidden');
-            updateSearchButtonState();
-        };
-
-        const showLocSuggestions = (items) => {
-            if (!items.length) {
-                hideLocBox();
-                return;
-            }
-
-            locBox.innerHTML = '';
-            items.forEach(i => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'w-full text-left px-3 py-2 hover:bg-blueMid/60 text-silver text-sm';
-                btn.dataset.lat = i.lat;
-                btn.dataset.lng = i.lon;
-                btn.textContent = i.display_name;
-
-                btn.addEventListener('click', () => {
-                    locInput.value = i.display_name;
-                    latEl.value = i.lat;
-                    lngEl.value = i.lon;
-                    hideLocBox();
-                    lockLocInput();
-                    updateSearchButtonState();
-                });
-
-                locBox.appendChild(btn);
-            });
-
-            locBox.classList.remove('hidden');
-        };
-
-        const fetchLocSuggestions = async (q) => {
-            latEl.value = '';
-            lngEl.value = '';
-            if (q.length < 3 || locInput.readOnly) {
-                hideLocBox();
-                updateSearchButtonState();
-                return;
-            }
-
-            try {
-                const url = new URL('https://nominatim.openstreetmap.org/search');
-                url.searchParams.set('q', q);
-                url.searchParams.set('format', 'json');
-                url.searchParams.set('limit', '6');
-                url.searchParams.set('accept-language', 'es');
-                url.searchParams.set('countrycodes', 'ar');
-
-                const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
-                if (!res.ok) return hideLocBox();
-                const data = await res.json();
-                showLocSuggestions(Array.isArray(data) ? data : []);
-            } catch {
-                hideLocBox();
-            } finally {
-                updateSearchButtonState();
-            }
-        };
-
-        locInput.addEventListener('input', () => {
-            if (locInput.readOnly) return;
-            clearTimeout(locTimeout);
-            locTimeout = setTimeout(() => fetchLocSuggestions(locInput.value.trim()), 350);
-            updateSearchButtonState();
-        });
-
-        locInput.addEventListener('blur', () => {
-            setTimeout(() => {
-                hideLocBox();
-                if (!latEl.value || !lngEl.value) locInput.value = '';
-                updateSearchButtonState();
-            }, 150);
-        });
-
-        if (locClear) {
-            locClear.addEventListener('click', () => {
-                unlockLocInput();
-                locInput.focus();
-            });
+    const fillSelect = (select, items, {placeholder}) => {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        for (const it of items) {
+            const opt = document.createElement('option');
+            opt.value = it.id;
+            opt.textContent = it.nombre;
+            select.appendChild(opt);
         }
+    };
+
+    const loadProvinces = async () => {
+        if (!provinciaSelect) return;
+
+        try {
+            const res = await fetch('/geo/provincias', { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error('No OK');
+
+            const data = await res.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            fillSelect(provinciaSelect, items, { placeholder: 'Seleccioná una provincia' });
+
+            // si venía request('province_id') desde la URL, lo re-seleccionamos
+            const prevProvinceId = provinceIdEl?.value || '';
+            if (prevProvinceId) {
+                provinciaSelect.value = prevProvinceId;
+                const opt = provinciaSelect.selectedOptions?.[0];
+                if (opt) {
+                    if (provinceNameEl) provinceNameEl.value = opt.textContent || '';
+                }
+                // disparar carga de ciudades
+                await loadCitiesForProvince(prevProvinceId, true);
+            }
+        } catch (e) {
+            provinciaSelect.innerHTML = `<option value="">No se pudieron cargar provincias</option>`;
+            resetCity('No se pudieron cargar ciudades');
+        } finally {
+            updateSearchButtonState();
+        }
+    };
+
+    const loadCitiesForProvince = async (provinceId, tryRestoreFromQuery = false) => {
+        if (!ciudadSelect) return;
+        resetCity('Cargando ciudades…');
+
+        if (!provinceId) {
+            resetCity();
+            return;
+        }
+
+        try {
+            const url = new URL('/geo/ciudades', window.location.origin);
+            url.searchParams.set('provincia', provinceId);
+
+            const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error('No OK');
+
+            const data = await res.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            ciudadSelect.disabled = false;
+            fillSelect(ciudadSelect, items, { placeholder: 'Seleccioná una ciudad' });
+
+            // restaurar city_id si vino por querystring
+            if (tryRestoreFromQuery) {
+                const prevCityId = cityIdEl?.value || '';
+                if (prevCityId) {
+                    ciudadSelect.value = prevCityId;
+                    const opt = ciudadSelect.selectedOptions?.[0];
+                    if (opt) {
+                        if (cityNameEl) cityNameEl.value = opt.textContent || '';
+                    }
+                }
+            }
+        } catch (e) {
+            resetCity('No se pudieron cargar ciudades');
+        } finally {
+            updateSearchButtonState();
+        }
+    };
+
+    if (provinciaSelect) {
+        provinciaSelect.addEventListener('change', async () => {
+            const provinceId = provinciaSelect.value || '';
+            const provinceName = provinciaSelect.selectedOptions?.[0]?.textContent || '';
+
+            if (provinceIdEl) provinceIdEl.value = provinceId;
+            if (provinceNameEl) provinceNameEl.value = provinceName;
+
+            // al cambiar provincia se resetea ciudad
+            resetCity();
+
+            await loadCitiesForProvince(provinceId, false);
+            updateSearchButtonState();
+        });
     }
 
-    // Estado inicial
+    if (ciudadSelect) {
+        ciudadSelect.addEventListener('change', () => {
+            const cityId = ciudadSelect.value || '';
+            const cityName = ciudadSelect.selectedOptions?.[0]?.textContent || '';
+
+            if (cityIdEl) cityIdEl.value = cityId;
+            if (cityNameEl) cityNameEl.value = cityName;
+
+            updateSearchButtonState();
+        });
+    }
+
+    // init
+    resetCity();
+    loadProvinces();
     updateSearchButtonState();
 });
 </script>
-
-
 
 @endsection

@@ -22,12 +22,22 @@ class Profile extends Model
         'mode_presential',
         'mode_remote',
 
-        // ubicación
+        // ubicación legacy (compatibilidad)
         'country',
         'state',
         'city',
+
+        // ubicación GeoRef (NUEVO)
+        'province_id',
+        'province_name',
+        'city_id',
+        'city_name',
+
+        // dirección
         'address',
-        'location_label',   // texto exacto elegido por el provider
+        'address_extra',
+
+        // coords
         'lat',
         'lng',
 
@@ -39,6 +49,9 @@ class Profile extends Model
         'contact_email',
         'photo_path',
         'video_url',
+
+        // contadores/otros si existen en tu schema
+        'views_count',
     ];
 
     protected $casts = [
@@ -47,6 +60,7 @@ class Profile extends Model
         'approved_at'     => 'datetime',
         'lat'             => 'float',
         'lng'             => 'float',
+        'views_count'     => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -64,7 +78,7 @@ class Profile extends Model
     public function specialties(): BelongsToMany
     {
         return $this->belongsToMany(Specialty::class, 'profile_specialty')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     public function media(): HasMany

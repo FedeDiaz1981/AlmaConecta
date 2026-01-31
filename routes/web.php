@@ -15,7 +15,8 @@ use App\Models\Specialty;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ProviderProfileController;
-use App\Http\Controllers\HomeController; // ⬅️ HomeController
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\GeoRefController;
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
@@ -155,8 +156,8 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
         return response()->json([
             'ok'    => true,
             'id'    => $user->id,
-            'email'=> $user->email,
-            'role' => $user->role,
+            'email' => $user->email,
+            'role'  => $user->role,
         ]);
     });
 })->middleware('throttle:3,1');
@@ -165,9 +166,6 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
 |--------------------------------------------------------------------------
 | Público
 |--------------------------------------------------------------------------
-|
-| Con BYPASS_HOME=1 devolvemos una página mínima.
-|
 */
 Route::get('/', function () use ($safe) {
     if (env('BYPASS_HOME', false)) {
@@ -184,11 +182,37 @@ Route::get('/', function () use ($safe) {
         ], 200);
     }
 
-    // Home “real” usando el HomeController
     return $safe(fn () => app(HomeController::class)->index());
 })->name('home');
 
-// Búsqueda (GET)
+/*
+|----------------------------------------------------------------------
+| ✅ GeoRef endpoints
+|----------------------------------------------------------------------
+*/
+Route::get('/geo/provincias', function () use ($safe) {
+    return $safe(fn () => app(GeoRefController::class)->provincias());
+})->name('geo.provincias');
+
+Route::get('/geo/ciudades', function () use ($safe) {
+    return $safe(fn () => app(GeoRefController::class)->ciudades(request()));
+})->name('geo.ciudades');
+
+// ✅ NUEVO: validación/sugerencias de dirección completa (calle + altura)
+Route::get('/geo/address-suggest', function () use ($safe) {
+    return $safe(fn () => app(GeoRefController::class)->addressSuggest(request()));
+})->name('geo.address_suggest');
+
+// (Opcional si lo usás) sugerencias de calles
+Route::get('/geo/street-suggest', function () use ($safe) {
+    return $safe(fn () => app(GeoRefController::class)->streetSuggest(request()));
+})->name('geo.street_suggest');
+
+/*
+|--------------------------------------------------------------------------
+| Búsqueda
+|--------------------------------------------------------------------------
+*/
 Route::get('/search', function () use ($safe) {
     return $safe(fn () => app(SearchController::class)->search(request()));
 })->name('search');
@@ -264,14 +288,11 @@ Route::middleware(['auth', 'can:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        // Dashboard admin
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Gestión unificada de aprobaciones
         Route::get('/approvals', [ApprovalOverviewController::class, 'index'])
             ->name('approvals.index');
 
-        // Gestión de usuarios
         Route::get('/users', [UserApprovalController::class, 'index'])->name('users.index');
         Route::post('/users/{user}/approve', [UserApprovalController::class, 'approve'])->name('users.approve');
         Route::post('/users/{user}/reject', [UserApprovalController::class, 'reject'])->name('users.reject');
@@ -279,12 +300,10 @@ Route::middleware(['auth', 'can:admin'])
         Route::post('/users/{user}/activate', [UserApprovalController::class, 'activate'])->name('users.activate');
         Route::delete('/users/{user}', [UserApprovalController::class, 'destroy'])->name('users.destroy');
 
-        // Gestión de edición de perfiles
         Route::get('/edits', [AdminEditController::class, 'index'])->name('edits.index');
         Route::post('/edits/{edit}/approve', [AdminEditController::class, 'approve'])->name('edits.approve');
         Route::post('/edits/{edit}/reject', [AdminEditController::class, 'reject'])->name('edits.reject');
 
-        // ABM de especialidades
         Route::resource('specialties', \App\Http\Controllers\Admin\SpecialtyController::class)
             ->except(['show']);
 

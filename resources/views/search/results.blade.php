@@ -54,7 +54,14 @@
 
                             <div class="text-xs text-silver/70 flex flex-wrap gap-2">
                                 <span>
-                                    {{ $p->service->name ?? 'Sin especialidad' }}
+                                    @if($p->specialties && $p->specialties->count())
+                                        {{ $p->specialties->pluck('name')->take(2)->join(' · ') }}
+                                        @if($p->specialties->count() > 2)
+                                            <span class="opacity-70">+{{ $p->specialties->count() - 2 }}</span>
+                                        @endif
+                                    @else
+                                        Sin especialidad
+                                    @endif
                                 </span>
 
                                 @if($p->mode_remote)
