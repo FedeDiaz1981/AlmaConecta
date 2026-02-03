@@ -92,9 +92,16 @@ class SearchController extends Controller
             }
 
             // default: relevancia = mejor rating
+            $query = $query->withAvg('reviews', 'rating');
+
+            if (DB::getDriverName() === 'pgsql') {
+                return $query
+                    ->orderByRaw('reviews_avg_rating DESC NULLS LAST')
+                    ->orderByDesc('id');
+            }
+
             return $query
-                ->withAvg('reviews', 'rating')
-                ->orderByRaw('COALESCE(reviews_avg_rating, 0) DESC')
+                ->orderByDesc('reviews_avg_rating')
                 ->orderByDesc('id');
         };
 
