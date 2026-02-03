@@ -13,6 +13,12 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
 
+    # Disco persistente para uploads (storage)
+    disk:
+      name: storage
+      mountPath: /var/www/html/storage
+      sizeGB: 1
+
     # Ejecuta migraciones en el "release phase" antes de arrancar la app
     releaseCommand: >
       bash -lc '
@@ -40,6 +46,10 @@ services:
         fi
 
         echo "==> Storage symlink"
+        echo "==> Ensuring storage directories"
+        mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+        chown -R www-data:www-data storage bootstrap/cache || true
+        chmod -R 775 storage bootstrap/cache || true
         php artisan storage:link || true
 
         echo "==> Rebuilding caches"
@@ -97,4 +107,4 @@ services:
       # Fuerza reset completo de tablas en el próximo deploy
       # Cambialo a "0" cuando ya esté estable.
       - key: RUN_FRESH
-        value: "1"
+        value: "0"

@@ -37,6 +37,14 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 WORKDIR /var/www/html
 
 # --------------------------------------------
+# Límites de subida (imagenes de perfil/destacadas)
+# --------------------------------------------
+RUN { \
+  echo "upload_max_filesize=10M"; \
+  echo "post_max_size=12M"; \
+} > /usr/local/etc/php/conf.d/uploads.ini
+
+# --------------------------------------------
 # Extensiones y Apache
 # --------------------------------------------
 RUN apt-get update && apt-get install -y \
