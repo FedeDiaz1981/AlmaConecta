@@ -7,16 +7,32 @@ use App\Models\Specialty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class SpecialtyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $specialties = Specialty::query()
-            ->orderBy('name')
-            ->paginate(50);
+        $q = trim((string) $request->input('q', ''));
 
-        return view('admin.specialties.index', compact('specialties'));
+        $specialties = Specialty::query()
+            ->when($q !== '', function ($query) use ($q) {
+                $needle = mb_strtolower($q);
+                $query->where(function ($w) use ($needle, $q) {
+                    if (DB::getDriverName() === 'pgsql') {
+                        $w->where('name', 'ILIKE', "%{$q}%")
+                          ->orWhere('slug', 'ILIKE', "%{$q}%");
+                    } else {
+                        $w->whereRaw('LOWER(name) LIKE ?', ["%{$needle}%"])
+                          ->orWhereRaw('LOWER(slug) LIKE ?', ["%{$needle}%"]);
+                    }
+                });
+            })
+            ->orderBy('name')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('admin.specialties.index', compact('specialties', 'q'));
     }
 
     public function create()
@@ -32,6 +48,10 @@ class SpecialtyController extends Controller
             'active'         => 'nullable|boolean',
             'is_featured'    => 'nullable|boolean',   // ✅ mismo nombre que en el modelo/vistas
             'featured_image' => 'nullable|image|max:2048',
+        ], [
+            'featured_image.uploaded' => 'No se pudo subir la imagen. Probá con un archivo más liviano o aumentá el límite de subida del servidor.',
+            'featured_image.image'    => 'El archivo debe ser una imagen válida.',
+            'featured_image.max'      => 'La imagen no puede superar los 2 MB.',
         ]);
 
         // Normalizamos booleanos
@@ -74,6 +94,10 @@ class SpecialtyController extends Controller
             'active'         => 'nullable|boolean',
             'is_featured'    => 'nullable|boolean',   // ✅ mismo nombre
             'featured_image' => 'nullable|image|max:2048',
+        ], [
+            'featured_image.uploaded' => 'No se pudo subir la imagen. Probá con un archivo más liviano o aumentá el límite de subida del servidor.',
+            'featured_image.image'    => 'El archivo debe ser una imagen válida.',
+            'featured_image.max'      => 'La imagen no puede superar los 2 MB.',
         ]);
 
         // Booleanos

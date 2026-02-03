@@ -66,6 +66,9 @@
                                 name="q"
                                 id="q"
                                 autocomplete="off"
+                                aria-autocomplete="list"
+                                aria-expanded="false"
+                                aria-controls="q-suggest-list"
                                 required
                                 placeholder="Reiki, Yoga, Constelaciones..."
                                 value="{{ request('q') }}"
@@ -75,6 +78,19 @@
                                     class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
                                 ✕
                             </button>
+
+                            {{-- Sugerencias de especialidades --}}
+                            <div id="q-suggest"
+                                 role="listbox"
+                                 class="absolute left-0 right-0 top-full mt-2 z-40 hidden rounded-xl border border-blueMid bg-blueNight shadow-strong overflow-hidden">
+                                <div id="q-suggest-loading" class="hidden px-3 py-2 text-xs text-silver/60">
+                                    Buscando...
+                                </div>
+                                <div id="q-suggest-empty" class="hidden px-3 py-2 text-xs text-silver/60">
+                                    Sin resultados.
+                                </div>
+                                <div id="q-suggest-list" class="py-1 max-h-56 overflow-auto"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -87,9 +103,18 @@
                                 Provincia <span class="text-red-400">*</span>
                             </label>
 
-                            <select id="provinciaSelect" class="hero-input">
-                                <option value="">Cargando provincias…</option>
-                            </select>
+                            <div class="relative">
+                                <button type="button"
+                                        id="provinciaSelect"
+                                        class="hero-input pr-9 text-left">
+                                    Cargando provincias…
+                                </button>
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-silver/60 text-xs">▾</span>
+                                <div id="provinciaList"
+                                     role="listbox"
+                                     class="absolute left-0 right-0 top-full mt-2 z-30 hidden rounded-xl border border-blueMid bg-blueNight shadow-strong max-h-56 overflow-y-auto py-1">
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Ciudad --}}
@@ -98,9 +123,19 @@
                                 Ciudad <span class="text-red-400">*</span>
                             </label>
 
-                            <select id="ciudadSelect" class="hero-input" disabled>
-                                <option value="">Primero elegí una provincia</option>
-                            </select>
+                            <div class="relative">
+                                <button type="button"
+                                        id="ciudadSelect"
+                                        class="hero-input pr-9 text-left opacity-60 cursor-not-allowed"
+                                        disabled>
+                                    Primero elegí una provincia
+                                </button>
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-silver/60 text-xs">▾</span>
+                                <div id="ciudadList"
+                                     role="listbox"
+                                     class="absolute left-0 right-0 top-full mt-2 z-30 hidden rounded-xl border border-blueMid bg-blueNight shadow-strong max-h-56 overflow-y-auto py-1">
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Hidden: ids + nombres (para búsqueda / UI) --}}
@@ -208,11 +243,11 @@
                 </style>
 
                 <div id="specialty-carousel"
-                     class="flex gap-5 overflow-y-visible overflow-x-auto md:overflow-x-visible scroll-smooth snap-x snap-mandatory pb-2
+                     class="flex gap-5 overflow-y-visible overflow-x-auto md:overflow-x-hidden scroll-smooth snap-x snap-mandatory pb-2
                             [-ms-overflow-style:'none'] [scrollbar-width:'none']">
 
                     @foreach($topSpecialties as $specialty)
-                        <a href="{{ route('search', ['q' => $specialty->name]) }}"
+                        <a href="{{ route('search', ['q' => $specialty->name, 'all' => 1]) }}"
                         class="snap-start shrink-0 relative group
                                 min-w-[260px] max-w-[80vw] md:w-[370px]
                                 h-[320px] md:h-[480px]
@@ -284,7 +319,7 @@
                 </span>
                 <span>Facilitadores destacados</span>
             </h2>
-            <a href="{{ route('search') }}" class="text-sm text-gold hover:text-goldLight">
+            <a href="{{ route('search', ['featured' => 1, 'sort' => 'rating_desc']) }}" class="text-sm text-gold hover:text-goldLight">
                 Ver más
             </a>
         </div>
@@ -297,9 +332,18 @@
                            transition-transform duration-300 ease-out
                            hover:-translate-y-1 hover:shadow-strong hover:border-gold/50">
 
-                    <div class="absolute right-4 top-4 text-[10px] uppercase tracking-[0.14em]
-                                px-2 py-1 rounded-full bg-gold/10 text-gold border border-gold/40">
-                        Destacado
+                    <div class="absolute right-4 top-4 flex flex-col items-end gap-1">
+                        <span class="text-[10px] uppercase tracking-[0.14em]
+                                     px-2 py-1 rounded-full bg-gold/10 text-gold border border-gold/40">
+                            Destacado
+                        </span>
+                        @if(!is_null($profile->reviews_avg_rating))
+                            <span class="inline-flex items-center gap-1 rounded-full bg-blueNight/80 px-2.5 py-1 text-[11px] text-silver border border-blueMid/70">
+                                <span class="text-gold">★</span>
+                                <span class="font-semibold text-silver">{{ number_format($profile->reviews_avg_rating, 1) }}</span>
+                                <span class="text-silver/60">({{ $profile->reviews_count ?? 0 }})</span>
+                            </span>
+                        @endif
                     </div>
 
                     <div class="flex items-center gap-3 mb-4">
@@ -337,7 +381,7 @@
                     </p>
 
                     <div class="flex items-center justify-between text-[11px] text-silver/60">
-                        <span class="truncate">
+                        <span class="truncate max-w-[60%]">
                             {{ $profile->city }}, {{ $profile->state }}
                         </span>
                         <a href="{{ route('profiles.show', $profile->slug) }}"
@@ -386,9 +430,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inputs
     const qInput  = document.getElementById('q');
     const qClear  = document.getElementById('q-clear');
+    const qSuggest = document.getElementById('q-suggest');
+    const qSuggestList = document.getElementById('q-suggest-list');
+    const qSuggestEmpty = document.getElementById('q-suggest-empty');
+    const qSuggestLoading = document.getElementById('q-suggest-loading');
 
     const provinciaSelect = document.getElementById('provinciaSelect');
+    const provinciaList   = document.getElementById('provinciaList');
     const ciudadSelect    = document.getElementById('ciudadSelect');
+    const ciudadList      = document.getElementById('ciudadList');
 
     const provinceIdEl    = document.getElementById('province_id');
     const provinceNameEl  = document.getElementById('province_name');
@@ -426,6 +476,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const getMissing = () => {
         if (!qInput || qInput.value.trim() === '') {
             return { msg: 'Completá “¿Qué estás buscando?”.', field: qInput };
+        }
+        if (qInput?.dataset?.picked !== '1') {
+            return { msg: 'Seleccioná una especialidad de la lista.', field: qInput };
         }
         if (!provinceIdEl?.value) {
             return { msg: 'Elegí una provincia.', field: provinciaSelect };
@@ -489,42 +542,255 @@ document.addEventListener('DOMContentLoaded', () => {
             qClear.classList.toggle('hidden', qInput.value.trim() === '');
         };
 
-        qInput.addEventListener('input', () => {
+        const setPicked = (value) => {
+            qInput.value = value || '';
+            qInput.dataset.picked = '1';
+            qInput.readOnly = true;
+            qInput.setAttribute('aria-disabled', 'true');
+            qInput.classList.add('opacity-80', 'cursor-not-allowed');
+            hideSuggest();
             syncQClear();
             updateSearchButtonState();
+        };
+
+        const clearPicked = () => {
+            qInput.readOnly = false;
+            qInput.removeAttribute('aria-disabled');
+            qInput.classList.remove('opacity-80', 'cursor-not-allowed');
+            qInput.dataset.picked = '0';
+            qInput.value = '';
+            hideSuggest();
+            syncQClear();
+            updateSearchButtonState();
+        };
+
+        const markUnpicked = () => {
+            qInput.dataset.picked = '0';
+            updateSearchButtonState();
+        };
+
+        // ----- Sugerencias de especialidades -----
+        const suggestionCache = new Map();
+        let suggestTimer = null;
+        let suggestAbort = null;
+        let lastSuggestTerm = '';
+        let suppressBlurClear = false;
+
+        const setSuggestExpanded = (isOpen) => {
+            qInput.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        };
+
+        const hideSuggest = () => {
+            if (!qSuggest) return;
+            qSuggest.classList.add('hidden');
+            setSuggestExpanded(false);
+        };
+
+        const showSuggest = () => {
+            if (!qSuggest) return;
+            qSuggest.classList.remove('hidden');
+            setSuggestExpanded(true);
+        };
+
+        const setSuggestState = ({ loading = false, empty = false }) => {
+            if (qSuggestLoading) qSuggestLoading.classList.toggle('hidden', !loading);
+            if (qSuggestEmpty) qSuggestEmpty.classList.toggle('hidden', !empty);
+        };
+
+        const renderSuggestions = (items) => {
+            if (!qSuggestList) return;
+            qSuggestList.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                setSuggestState({ loading: false, empty: true });
+                return;
+            }
+
+            setSuggestState({ loading: false, empty: false });
+
+            const frag = document.createDocumentFragment();
+            items.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('role', 'option');
+                btn.dataset.name = item.name || '';
+                btn.className = 'w-full text-left px-3 py-2 text-sm text-silver hover:bg-blueDeep/60 transition';
+                btn.textContent = item.name || '';
+                frag.appendChild(btn);
+            });
+            qSuggestList.appendChild(frag);
+        };
+
+        const fetchSuggestions = async (term) => {
+            if (qInput.readOnly) return;
+            const q = (term || '').trim();
+            if (q.length < 1) {
+                hideSuggest();
+                return;
+            }
+
+            lastSuggestTerm = q;
+
+            if (suggestionCache.has(q)) {
+                renderSuggestions(suggestionCache.get(q));
+                showSuggest();
+                return;
+            }
+
+            setSuggestState({ loading: true, empty: false });
+            showSuggest();
+
+            if (suggestAbort) suggestAbort.abort();
+            suggestAbort = new AbortController();
+
+            try {
+                const url = new URL('/specialties/suggest', window.location.origin);
+                url.searchParams.set('q', q);
+
+                const res = await fetch(url.toString(), {
+                    headers: { 'Accept': 'application/json' },
+                    signal: suggestAbort.signal,
+                });
+
+                if (!res.ok) throw new Error('No OK');
+
+                const data = await res.json();
+                const items = Array.isArray(data) ? data : [];
+
+                suggestionCache.set(q, items);
+
+                // Si el input cambiÃ³ mientras venÃ­a la respuesta, no renderizamos
+                if (qInput.value.trim() !== q) return;
+
+                renderSuggestions(items);
+                showSuggest();
+            } catch (e) {
+                if (e?.name === 'AbortError') return;
+                renderSuggestions([]);
+                showSuggest();
+            }
+        };
+
+        const scheduleSuggest = (term) => {
+            if (suggestTimer) clearTimeout(suggestTimer);
+            suggestTimer = setTimeout(() => fetchSuggestions(term), 200);
+        };
+
+        qInput.addEventListener('input', () => {
+            if (qInput.readOnly) return;
+            const term = qInput.value || '';
+            markUnpicked();
+            syncQClear();
+            updateSearchButtonState();
+            scheduleSuggest(term);
+        });
+
+        qInput.addEventListener('focus', () => {
+            if (qInput.readOnly) return;
+            const term = qInput.value || '';
+            if (term.trim().length >= 1) {
+                scheduleSuggest(term);
+            }
         });
 
         if (qClear) {
             qClear.addEventListener('click', () => {
-                qInput.value = '';
-                syncQClear();
-                updateSearchButtonState();
+                clearPicked();
                 qInput.focus();
             });
         }
 
-        syncQClear();
+        if (qSuggestList) {
+            qSuggestList.addEventListener('mousedown', () => {
+                suppressBlurClear = true;
+                setTimeout(() => { suppressBlurClear = false; }, 0);
+            });
+            qSuggestList.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-name]');
+                if (!btn) return;
+                setPicked(btn.dataset.name || '');
+            });
+        }
+
+        qInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (suppressBlurClear) return;
+                if (qInput.readOnly) return;
+                if (qInput.dataset.picked !== '1') {
+                    qInput.value = '';
+                    hideSuggest();
+                    syncQClear();
+                    updateSearchButtonState();
+                }
+            }, 120);
+        });
+
+        // Cerrar sugerencias al click afuera
+        document.addEventListener('click', (e) => {
+            if (!qSuggest || qSuggest.classList.contains('hidden')) return;
+            if (qSuggest.contains(e.target) || qInput.contains(e.target) || qClear?.contains(e.target)) return;
+            hideSuggest();
+        });
+
+        // Cerrar con ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideSuggest();
+            }
+        });
+
+        // init
+        if (qInput.value.trim() !== '') {
+            setPicked(qInput.value.trim());
+        } else {
+            qInput.dataset.picked = '0';
+            syncQClear();
+        }
     }
 
     // ----- Cascada Provincia/Ciudad -----
+    const closeList = (listEl) => {
+        if (!listEl) return;
+        listEl.classList.add('hidden');
+    };
+
+    const openList = (listEl) => {
+        if (!listEl) return;
+        listEl.classList.remove('hidden');
+    };
+
+    const setButtonLabel = (btn, label, placeholder) => {
+        if (!btn) return;
+        btn.textContent = label || placeholder;
+    };
+
+    const renderList = (listEl, items) => {
+        if (!listEl) return;
+        if (!items || items.length === 0) {
+            listEl.innerHTML = '<div class="px-3 py-2 text-xs text-silver/60">Sin resultados</div>';
+            return;
+        }
+        listEl.innerHTML = items.map((it) => `
+            <button type="button"
+                    role="option"
+                    class="w-full text-left px-3 py-2 text-sm text-silver hover:bg-blueDeep/60 transition"
+                    data-id="${it.id}"
+                    data-name="${it.nombre}">
+                ${it.nombre}
+            </button>
+        `).join('');
+    };
+
     const resetCity = (placeholder = 'Primero elegí una provincia') => {
         if (!ciudadSelect) return;
-        ciudadSelect.innerHTML = `<option value="">${placeholder}</option>`;
         ciudadSelect.disabled = true;
+        ciudadSelect.classList.add('opacity-60', 'cursor-not-allowed');
+        setButtonLabel(ciudadSelect, '', placeholder);
+        closeList(ciudadList);
 
         if (cityIdEl) cityIdEl.value = '';
         if (cityNameEl) cityNameEl.value = '';
         updateSearchButtonState();
-    };
-
-    const fillSelect = (select, items, {placeholder}) => {
-        select.innerHTML = `<option value="">${placeholder}</option>`;
-        for (const it of items) {
-            const opt = document.createElement('option');
-            opt.value = it.id;
-            opt.textContent = it.nombre;
-            select.appendChild(opt);
-        }
     };
 
     const loadProvinces = async () => {
@@ -537,21 +803,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             const items = Array.isArray(data.items) ? data.items : [];
 
-            fillSelect(provinciaSelect, items, { placeholder: 'Seleccioná una provincia' });
+            renderList(provinciaList, items);
+            setButtonLabel(provinciaSelect, '', 'Seleccioná una provincia');
 
             // si venía request('province_id') desde la URL, lo re-seleccionamos
             const prevProvinceId = provinceIdEl?.value || '';
             if (prevProvinceId) {
-                provinciaSelect.value = prevProvinceId;
-                const opt = provinciaSelect.selectedOptions?.[0];
-                if (opt) {
-                    if (provinceNameEl) provinceNameEl.value = opt.textContent || '';
+                const prevProvinceName = provinceNameEl?.value || (items.find(it => it.id === prevProvinceId)?.nombre || '');
+                if (prevProvinceName) {
+                    setButtonLabel(provinciaSelect, prevProvinceName, 'Seleccioná una provincia');
+                    if (provinceNameEl) provinceNameEl.value = prevProvinceName;
                 }
                 // disparar carga de ciudades
                 await loadCitiesForProvince(prevProvinceId, true);
             }
         } catch (e) {
-            provinciaSelect.innerHTML = `<option value="">No se pudieron cargar provincias</option>`;
+            setButtonLabel(provinciaSelect, '', 'No se pudieron cargar provincias');
             resetCity('No se pudieron cargar ciudades');
         } finally {
             updateSearchButtonState();
@@ -560,7 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadCitiesForProvince = async (provinceId, tryRestoreFromQuery = false) => {
         if (!ciudadSelect) return;
-        resetCity('Cargando ciudades…');
+        setButtonLabel(ciudadSelect, '', 'Cargando ciudades…');
+        closeList(ciudadList);
 
         if (!provinceId) {
             resetCity();
@@ -578,16 +846,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const items = Array.isArray(data.items) ? data.items : [];
 
             ciudadSelect.disabled = false;
-            fillSelect(ciudadSelect, items, { placeholder: 'Seleccioná una ciudad' });
+            ciudadSelect.classList.remove('opacity-60', 'cursor-not-allowed');
+            renderList(ciudadList, items);
+            setButtonLabel(ciudadSelect, '', 'Seleccioná una ciudad');
 
             // restaurar city_id si vino por querystring
             if (tryRestoreFromQuery) {
                 const prevCityId = cityIdEl?.value || '';
                 if (prevCityId) {
-                    ciudadSelect.value = prevCityId;
-                    const opt = ciudadSelect.selectedOptions?.[0];
-                    if (opt) {
-                        if (cityNameEl) cityNameEl.value = opt.textContent || '';
+                    const prevCityName = cityNameEl?.value || (items.find(it => it.id === prevCityId)?.nombre || '');
+                    if (prevCityName) {
+                        setButtonLabel(ciudadSelect, prevCityName, 'Seleccioná una ciudad');
+                        if (cityNameEl) cityNameEl.value = prevCityName;
+                    } else {
+                        resetCity();
                     }
                 }
             }
@@ -599,37 +871,105 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (provinciaSelect) {
-        provinciaSelect.addEventListener('change', async () => {
-            const provinceId = provinciaSelect.value || '';
-            const provinceName = provinciaSelect.selectedOptions?.[0]?.textContent || '';
+        provinciaSelect.addEventListener('click', () => {
+            if (provinciaList?.classList.contains('hidden')) {
+                openList(provinciaList);
+                closeList(ciudadList);
+            } else {
+                closeList(provinciaList);
+            }
+        });
+    }
+
+    if (provinciaList) {
+        provinciaList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-id]');
+            if (!btn) return;
+
+            const provinceId = btn.dataset.id || '';
+            const provinceName = btn.dataset.name || '';
 
             if (provinceIdEl) provinceIdEl.value = provinceId;
             if (provinceNameEl) provinceNameEl.value = provinceName;
+            setButtonLabel(provinciaSelect, provinceName, 'Seleccioná una provincia');
+            closeList(provinciaList);
 
-            // al cambiar provincia se resetea ciudad
-            resetCity();
-
+            resetCity('Cargando ciudades…');
             await loadCitiesForProvince(provinceId, false);
             updateSearchButtonState();
         });
     }
 
     if (ciudadSelect) {
-        ciudadSelect.addEventListener('change', () => {
-            const cityId = ciudadSelect.value || '';
-            const cityName = ciudadSelect.selectedOptions?.[0]?.textContent || '';
+        ciudadSelect.addEventListener('click', () => {
+            if (ciudadSelect.disabled) return;
+            if (ciudadList?.classList.contains('hidden')) {
+                openList(ciudadList);
+                closeList(provinciaList);
+            } else {
+                closeList(ciudadList);
+            }
+        });
+    }
+
+    if (ciudadList) {
+        ciudadList.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-id]');
+            if (!btn) return;
+
+            const cityId = btn.dataset.id || '';
+            const cityName = btn.dataset.name || '';
 
             if (cityIdEl) cityIdEl.value = cityId;
             if (cityNameEl) cityNameEl.value = cityName;
+            setButtonLabel(ciudadSelect, cityName, 'Seleccioná una ciudad');
+            closeList(ciudadList);
 
             updateSearchButtonState();
         });
     }
 
+    document.addEventListener('click', (e) => {
+        if (provinciaList && !provinciaList.contains(e.target) && !provinciaSelect.contains(e.target)) {
+            closeList(provinciaList);
+        }
+        if (ciudadList && !ciudadList.contains(e.target) && !ciudadSelect.contains(e.target)) {
+            closeList(ciudadList);
+        }
+    });
+
     // init
     resetCity();
     loadProvinces();
     updateSearchButtonState();
+});
+</script>
+
+{{-- Carousel prácticas destacadas --}}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const carousel = document.getElementById('specialty-carousel');
+    const prevBtn = document.getElementById('specialty-prev');
+    const nextBtn = document.getElementById('specialty-next');
+
+    if (!carousel || !prevBtn || !nextBtn) return;
+
+    const getStep = () => {
+        const first = carousel.querySelector('a');
+        if (!first) return 0;
+        const styles = window.getComputedStyle(carousel);
+        const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+        return first.getBoundingClientRect().width + gap;
+    };
+
+    const scrollByStep = (dir = 1) => {
+        const step = getStep();
+        if (!step) return;
+        carousel.scrollBy({ left: step * dir, behavior: 'smooth' });
+    };
+
+    prevBtn.addEventListener('click', () => scrollByStep(-1));
+    nextBtn.addEventListener('click', () => scrollByStep(1));
 });
 </script>
 

@@ -22,6 +22,7 @@
 
     $hasPhoto = !empty($profile->photo_path);
     $hasVideo = !empty($embed);
+    $isClient = auth()->check() && (auth()->user()->role ?? null) === 'client';
 @endphp
 
 <div class="py-8">
@@ -43,6 +44,11 @@
             </button>
 
             <div class="p-5 md:p-7">
+                @if (session('status'))
+                    <div class="mb-4 rounded-xl border border-emerald-500/60 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-200">
+                        {{ session('status') }}
+                    </div>
+                @endif
                 <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 items-start">
 
                     {{-- Foto / media --}}
@@ -106,6 +112,18 @@
                                 @endif
                             </div>
 
+                            @if(($reviewsCount ?? 0) > 0)
+                                <div class="mt-2 flex items-center gap-2 text-sm text-silver/80">
+                                    <span class="text-gold font-semibold">{{ $avgRating }}/5</span>
+                                    <span class="text-silver/60">({{ $reviewsCount }})</span>
+                                    <span class="text-gold">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <span class="{{ $i <= round($avgRating) ? '' : 'opacity-30' }}">★</span>
+                                        @endfor
+                                    </span>
+                                </div>
+                            @endif
+
                             <div class="mt-3 flex flex-wrap gap-2">
                                 @if($profile->mode_remote)
                                     <span class="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-200 border border-emerald-500/40">
@@ -128,8 +146,8 @@
                     </div>
                 </div>
 
-                {{-- Botones de contacto --}}
-                @if($waLink || $mailto)
+                {{-- Botones de contacto (solo clientes logueados) --}}
+                @if(auth()->check() && (auth()->user()->role ?? null) === 'client' && ($waLink || $mailto))
                     <div class="mt-6 pt-4 border-t border-blueMid/60">
                         <div class="flex flex-wrap justify-center gap-3">
                             @if($waLink)
@@ -148,6 +166,136 @@
                                 </a>
                             @endif
                         </div>
+                    </div>
+                @elseif($waLink || $mailto)
+                    <div class="mt-6 pt-4 border-t border-blueMid/60">
+                        <p class="text-center text-sm text-silver/80">
+                            Para contactar a un profesional es obligatorio tener cuenta.
+                            <a href="{{ route('login') }}" class="text-gold hover:text-goldLight underline">Iniciar sesión</a>
+                            o
+                            <a href="{{ route('register', ['account_type' => 'client']) }}" class="text-gold hover:text-goldLight underline">crear una cuenta gratuita</a>.
+                        </p>
+                    </div>
+                @endif
+
+                {{-- Reseñas --}}
+                <div class="mt-8 pt-4 border-t border-blueMid/60">
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-sm font-semibold text-silver uppercase tracking-wide">Reseñas</h2>
+                        @if($reviewsCount ?? 0)
+                            <div class="text-sm text-silver/80">
+                                <span class="text-gold font-semibold">{{ $avgRating }}/5</span>
+                                <span class="text-silver/60">({{ $reviewsCount }})</span>
+                            </div>
+                        @else
+                            <div class="text-xs text-silver/60">Sin reseñas aún</div>
+                        @endif
+                    </div>
+
+                    @if(($reviewsCount ?? 0) > 0)
+                        <div class="mt-4 space-y-4">
+                            @foreach($profile->reviews as $review)
+                                <div class="rounded-xl border border-blueMid/60 bg-blueDeep/60 p-4">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="text-sm text-silver font-medium">
+                                            {{ $review->user->name ?? 'Usuario' }}
+                                        </div>
+                                        <div class="text-xs text-silver/60">
+                                            {{ optional($review->created_at)->format('d/m/Y') }}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 text-sm text-gold">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <span class="{{ $i <= (int)$review->rating ? '' : 'opacity-30' }}">★</span>
+                                        @endfor
+                                    </div>
+                                    <p class="mt-2 text-sm text-silver/85">
+                                        {{ $review->comment }}
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($isClient)
+                        <form id="review-form"
+                              method="POST"
+                              action="{{ route('reviews.store', $profile) }}"
+                              class="mt-6 space-y-4">
+                            @csrf
+
+                            <div>
+                                <label class="block text-sm font-medium text-silver mb-1">Tu puntaje</label>
+                                <div class="flex flex-wrap gap-2 text-sm text-silver/80">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        <label class="inline-flex items-center gap-1">
+                                            <input type="radio"
+                                                   name="rating"
+                                                   value="{{ $i }}"
+                                                   class="text-gold focus:ring-gold border-blueMid bg-blueDeep/60"
+                                                   {{ (int)old('rating', $userReview?->rating) === $i ? 'checked' : '' }}>
+                                            <span>{{ $i }}</span>
+                                        </label>
+                                    @endfor
+                                </div>
+                                @error('rating')
+                                    <div class="text-red-300 text-sm mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-silver mb-1">Comentario</label>
+                                <textarea name="comment"
+                                          rows="4"
+                                          class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold"
+                                          placeholder="Contanos tu experiencia">{{ old('comment', $userReview?->comment) }}</textarea>
+                                @error('comment')
+                                    <div class="text-red-300 text-sm mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                        </form>
+                        <div class="flex items-center justify-end gap-3">
+                            @if($userReview)
+                                <form method="POST"
+                                      action="{{ route('reviews.destroy', $profile) }}"
+                                      onsubmit="return confirm('¿Eliminar tu reseña?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="inline-flex items-center rounded-full border border-red-400/60 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-red-900/30">
+                                        Borrar reseña
+                                    </button>
+                                </form>
+                            @endif
+                            <button type="submit"
+                                    form="review-form"
+                                    class="inline-flex items-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-blueDeep shadow-soft hover:bg-goldStrong">
+                                {{ $userReview ? 'Actualizar reseña' : 'Enviar reseña' }}
+                            </button>
+                        </div>
+                    @elseif(auth()->check())
+                        <p class="mt-4 text-sm text-silver/70">
+                            Solo los usuarios que buscan profesionales pueden dejar reseñas.
+                        </p>
+                    @else
+                        <p class="mt-4 text-sm text-silver/70">
+                            Para puntuar y comentar necesitás una cuenta.
+                            <a href="{{ route('login') }}" class="text-gold hover:text-goldLight underline">Iniciar sesión</a>
+                            o
+                            <a href="{{ route('register', ['account_type' => 'client']) }}" class="text-gold hover:text-goldLight underline">crear una cuenta gratuita</a>.
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Reportar perfil (solo clientes logueados) --}}
+                @if($isClient)
+                    <div class="mt-6 pt-4 border-t border-blueMid/60 text-center">
+                        <button type="button"
+                                onclick="openReportModal()"
+                                class="text-xs text-red-200/90 underline hover:text-red-200">
+                            Reportar perfil
+                        </button>
                     </div>
                 @endif
             </div>
@@ -191,6 +339,51 @@
                             </div>
                         @endif
                     </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- Modal reporte --}}
+        @if($isClient)
+            <div id="report-modal"
+                 class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 px-4">
+                <div class="relative w-full max-w-lg rounded-3xl bg-blueNight border border-blueMid shadow-strong">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-blueMid/70">
+                        <h2 class="text-sm font-semibold text-silver">
+                            Reportar perfil
+                        </h2>
+                        <button type="button"
+                                onclick="closeReportModal()"
+                                class="h-8 w-8 flex items-center justify-center rounded-full bg-blueDeep text-silver/80 hover:text-silver hover:bg-blueDeep/80 text-xs">
+                            ✕
+                        </button>
+                    </div>
+
+                    <form method="POST" action="{{ route('reports.store', $profile) }}" class="p-4 space-y-4">
+                        @csrf
+                        <div>
+                            <label class="block text-sm font-medium text-silver mb-1">Motivo de la observación</label>
+                            <textarea name="reason"
+                                      rows="4"
+                                      class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400"
+                                      placeholder="Contanos qué observaste">{{ old('reason') }}</textarea>
+                            @error('reason')
+                                <div class="text-red-300 text-sm mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3">
+                            <button type="button"
+                                    onclick="closeReportModal()"
+                                    class="inline-flex items-center rounded-full border border-blueMid/70 px-4 py-2 text-sm font-semibold text-silver/80 hover:bg-blueDeep/60">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-full bg-red-500/90 px-5 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-red-500">
+                                Enviar reporte
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         @endif
@@ -247,6 +440,34 @@
             closeMediaModal();
         }
     });
+
+    function openReportModal() {
+        const modal = document.getElementById('report-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeReportModal() {
+        const modal = document.getElementById('report-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('report-modal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        if (e.target === modal) {
+            closeReportModal();
+        }
+    });
 </script>
+
+@if($errors->has('reason'))
+<script>
+    openReportModal();
+</script>
+@endif
 
 @endsection

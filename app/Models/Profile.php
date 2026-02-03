@@ -52,6 +52,8 @@ class Profile extends Model
 
         // contadores/otros si existen en tu schema
         'views_count',
+        'is_suspended',
+        'suspended_at',
     ];
 
     protected $casts = [
@@ -61,6 +63,8 @@ class Profile extends Model
         'lat'             => 'float',
         'lng'             => 'float',
         'views_count'     => 'integer',
+        'is_suspended'    => 'boolean',
+        'suspended_at'    => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -84,5 +88,15 @@ class Profile extends Model
     public function media(): HasMany
     {
         return $this->hasMany(Media::class)->orderBy('position');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->latest();
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ProfileReport::class)->latest();
     }
 }

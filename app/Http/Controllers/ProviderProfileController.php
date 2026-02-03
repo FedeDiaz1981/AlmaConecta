@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use App\Models\{Profile, Service, Edit, Specialty};
+use App\Models\{Profile, Service, Edit, Specialty, Review};
 
 class ProviderProfileController extends Controller
 {
@@ -38,11 +38,16 @@ class ProviderProfileController extends Controller
             ->orderBy('name')
             ->get();
 
+        $reviewsCount = Review::where('profile_id', $profile->id)->count();
+        $avgRating = $reviewsCount ? round(Review::where('profile_id', $profile->id)->avg('rating'), 1) : null;
+
         return view('dashboard.profile_edit', compact(
             'profile',
             'services',
             'pendingEdit',
-            'specialties'
+            'specialties',
+            'avgRating',
+            'reviewsCount'
         ));
     }
 

@@ -17,13 +17,18 @@ class HomeController extends Controller
             ->limit(20)
             ->get();
 
-        // Perfiles destacados: top 20 por cantidad de visualizaciones
+        // Perfiles destacados: top 10 por mejor puntuación promedio (solo con reseñas)
         $featuredProfiles = Profile::query()
             ->with('specialties')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('status', 'approved')
-            ->orderByDesc('views_count')   // más vistos primero
-            ->orderByDesc('id')            // desempate estable
-            ->limit(20)
+            ->where('is_suspended', false)
+            ->whereHas('reviews')
+            ->orderByDesc('reviews_avg_rating')
+            ->orderByDesc('reviews_count')
+            ->orderByDesc('id')
+            ->limit(10)
             ->get();
 
         return view('home', [

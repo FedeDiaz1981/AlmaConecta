@@ -59,6 +59,10 @@
                     <a href="{{ route('register') }}" class="hover:text-gold whitespace-nowrap">
                         Publicá tu espacio
                     </a>
+                    <a href="{{ route('register', ['account_type' => 'client']) }}"
+                       class="hover:text-gold whitespace-nowrap">
+                        Busco un profesional
+                    </a>
 
                     <a href="{{ route('login') }}"
                        class="px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
@@ -81,14 +85,25 @@
                            class="px-3 py-1.5 rounded-md border border-gold/60 bg-gold/10 text-xs font-semibold text-blueDeep hover:bg-gold/30 whitespace-nowrap">
                             Panel admin
                         </a>
+                        <a href="{{ route('admin.reports.index') }}"
+                           class="px-3 py-1.5 rounded-md border border-red-400/60 bg-red-500/10 text-xs font-semibold text-red-200 hover:bg-red-500/20 whitespace-nowrap">
+                            Cuentas reportadas
+                        </a>
                     @endif
 
-                    {{-- Mi cuenta → abre modal de perfil --}}
-                    <button type="button"
-                            id="openProfileModal"
-                            class="px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
-                        Mi cuenta
-                    </button>
+                    {{-- Mi cuenta --}}
+                    @if($user->role === 'client')
+                        <a href="{{ route('profile.edit') }}"
+                           class="px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
+                            Mi cuenta
+                        </a>
+                    @else
+                        <button type="button"
+                                id="openProfileModal"
+                                class="px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
+                            Mi cuenta
+                        </button>
+                    @endif
 
                     {{-- Cerrar sesión --}}
                     <form method="POST" action="{{ route('logout') }}">
@@ -149,6 +164,9 @@
                         <a href="{{ route('register') }}" class="hover:text-gold">
                             Publicá tu espacio
                         </a>
+                        <a href="{{ route('register', ['account_type' => 'client']) }}" class="hover:text-gold">
+                            Busco un profesional
+                        </a>
 
                         <a href="{{ route('login') }}"
                            class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
@@ -169,14 +187,25 @@
                                " class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-gold/60 bg-gold/10 text-xs font-semibold text-blueDeep hover:bg-gold/30 mt-1">
                                 Panel admin
                             </a>
+                            <a href="{{ route('admin.reports.index') }}"
+                               class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-red-400/60 bg-red-500/10 text-xs font-semibold text-red-200 hover:bg-red-500/20 mt-1">
+                                Cuentas reportadas
+                            </a>
                         @endif
 
-                        {{-- Mi cuenta (abre modal) --}}
-                        <button type="button"
-                                id="openProfileModalMobile"
-                                class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong mt-1">
-                            Mi cuenta
-                        </button>
+                        {{-- Mi cuenta --}}
+                        @if($user->role === 'client')
+                            <a href="{{ route('profile.edit') }}"
+                               class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong mt-1">
+                                Mi cuenta
+                            </a>
+                        @else
+                            <button type="button"
+                                    id="openProfileModalMobile"
+                                    class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong mt-1">
+                                Mi cuenta
+                            </button>
+                        @endif
 
                         {{-- Cerrar sesión --}}
                         <form method="POST" action="{{ route('logout') }}" class="mt-1">

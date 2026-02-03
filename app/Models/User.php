@@ -23,6 +23,9 @@ class User extends Authenticatable
         'activated_at',
         'reject_reason',
         'suspend_reason',
+        'document_type',
+        'document_number',
+        'phone',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -42,5 +45,15 @@ class User extends Authenticatable
     public function profile()
     {
         return $this->hasOne(Profile::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function profileReports()
+    {
+        return $this->hasMany(ProfileReport::class);
     }
 }

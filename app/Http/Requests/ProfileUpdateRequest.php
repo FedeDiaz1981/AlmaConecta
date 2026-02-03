@@ -15,6 +15,9 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->user();
+        $isClient = $user && $user->role === 'client';
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -25,6 +28,9 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'document_type' => [$isClient ? 'required' : 'nullable', 'string', 'max:30'],
+            'document_number' => [$isClient ? 'required' : 'nullable', 'string', 'max:50'],
+            'phone' => [$isClient ? 'required' : 'nullable', 'string', 'max:30'],
         ];
     }
 }

@@ -6,11 +6,14 @@
 
         @php
             $isProvider = $user->role === 'provider';
+            $isClient = $user->role === 'client';
         @endphp
 
         <p class="mt-1 text-sm text-silver/80">
             @if($isProvider)
                 Actualizá tu nombre, correo electrónico y las especialidades con las que querés figurar.
+            @elseif($isClient)
+                Actualizá tu nombre, correo electrónico y tus datos de contacto.
             @else
                 Actualizá tu nombre y correo electrónico de acceso.
             @endif
@@ -85,6 +88,60 @@
                 </div>
             @endif
         </div>
+
+        {{-- Datos de contacto (solo usuarios buscadores) --}}
+        @if($isClient)
+            <div>
+                <x-input-label
+                    for="document_type"
+                    value="Tipo de documento"
+                    class="text-silver/90"
+                />
+                <x-text-input
+                    id="document_type"
+                    name="document_type"
+                    type="text"
+                    class="mt-1 block w-full bg-blueDeep border-blueMid text-silver"
+                    :value="old('document_type', $user->document_type)"
+                    required
+                />
+                <x-input-error class="mt-2" :messages="$errors->get('document_type')" />
+            </div>
+
+            <div>
+                <x-input-label
+                    for="document_number"
+                    value="Documento"
+                    class="text-silver/90"
+                />
+                <x-text-input
+                    id="document_number"
+                    name="document_number"
+                    type="text"
+                    class="mt-1 block w-full bg-blueDeep border-blueMid text-silver"
+                    :value="old('document_number', $user->document_number)"
+                    required
+                />
+                <x-input-error class="mt-2" :messages="$errors->get('document_number')" />
+            </div>
+
+            <div>
+                <x-input-label
+                    for="phone"
+                    value="Teléfono"
+                    class="text-silver/90"
+                />
+                <x-text-input
+                    id="phone"
+                    name="phone"
+                    type="text"
+                    class="mt-1 block w-full bg-blueDeep border-blueMid text-silver"
+                    :value="old('phone', $user->phone)"
+                    required
+                />
+                <x-input-error class="mt-2" :messages="$errors->get('phone')" />
+            </div>
+        @endif
 
         {{-- Especialidades múltiples: SOLO providers --}}
         @if($isProvider)

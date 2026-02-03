@@ -17,11 +17,14 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ProviderProfileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\GeoRefController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\ProfileReportController;
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserApprovalController;
 use App\Http\Controllers\AdminEditController;
 use App\Http\Controllers\Admin\ApprovalOverviewController;
+use App\Http\Controllers\Admin\ProfileReportController as AdminProfileReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -238,6 +241,10 @@ Route::get('/dashboard', function () {
         return redirect()->route('dashboard.profile.edit');
     }
 
+    if ($u && (($u->role ?? null) === 'client')) {
+        return redirect()->route('profile.edit');
+    }
+
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -249,7 +256,7 @@ Route::get('/dashboard', function () {
 Route::get('/specialties/suggest', function (Request $request) {
     $term = trim($request->get('q', ''));
 
-    if (mb_strlen($term) < 2) {
+    if (mb_strlen($term) < 1) {
         return response()->json([]);
     }
 
@@ -277,6 +284,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/profile', [ProviderProfileController::class, 'edit'])->name('dashboard.profile.edit');
     Route::post('/dashboard/profile', [ProviderProfileController::class, 'saveDraft'])->name('dashboard.profile.save');
     Route::post('/dashboard/profile/cancel', [ProviderProfileController::class, 'cancelPending'])->name('dashboard.profile.cancel');
+
+    // Reseñas (clientes)
+    Route::post('/profiles/{profile}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::delete('/profiles/{profile}/reviews', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    // Reportes de perfiles (clientes)
+    Route::post('/profiles/{profile}/report', [ProfileReportController::class, 'store'])->name('reports.store');
 });
 
 /*
@@ -303,6 +317,11 @@ Route::middleware(['auth', 'can:admin'])
         Route::get('/edits', [AdminEditController::class, 'index'])->name('edits.index');
         Route::post('/edits/{edit}/approve', [AdminEditController::class, 'approve'])->name('edits.approve');
         Route::post('/edits/{edit}/reject', [AdminEditController::class, 'reject'])->name('edits.reject');
+
+        Route::get('/reports', [AdminProfileReportController::class, 'index'])->name('reports.index');
+        Route::post('/reports/{report}/dismiss', [AdminProfileReportController::class, 'dismiss'])->name('reports.dismiss');
+        Route::post('/reports/{report}/suspend', [AdminProfileReportController::class, 'suspend'])->name('reports.suspend');
+        Route::delete('/reports/{report}/delete-profile', [AdminProfileReportController::class, 'deleteProfile'])->name('reports.delete_profile');
 
         Route::resource('specialties', \App\Http\Controllers\Admin\SpecialtyController::class)
             ->except(['show']);

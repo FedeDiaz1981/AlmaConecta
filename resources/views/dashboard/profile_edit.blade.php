@@ -24,6 +24,18 @@
             <div class="mb-6">
                 <h1 class="font-semibold text-2xl text-silver">Mi perfil profesional</h1>
                 <p class="mt-1 text-sm text-silver/70">Actualizá la información que van a ver tus potenciales clientes.</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="inline-flex items-center rounded-full border border-blueMid/60 bg-blueNight/70 px-3 py-1 text-silver/80">
+                        Promedio de reseñas:
+                        <span class="ml-2 text-gold font-semibold">
+                            {{ $reviewsCount ? $avgRating : '—' }}
+                        </span>
+                        <span class="ml-1 text-silver/60">/5</span>
+                    </span>
+                    <span class="text-silver/60 text-xs">
+                        ({{ $reviewsCount ?? 0 }} {{ ($reviewsCount ?? 0) === 1 ? 'reseña' : 'reseñas' }})
+                    </span>
+                </div>
             </div>
 
             <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6 sm:p-8 space-y-6">

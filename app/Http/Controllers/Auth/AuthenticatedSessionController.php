@@ -64,6 +64,8 @@ class AuthenticatedSessionController extends Controller
             $defaultRedirect = route('admin.dashboard');
         } elseif ($role === 'provider') {
             $defaultRedirect = route('dashboard.profile.edit');
+        } elseif ($role === 'client') {
+            $defaultRedirect = route('profile.edit');
         } else {
             $defaultRedirect = route('dashboard');
         }

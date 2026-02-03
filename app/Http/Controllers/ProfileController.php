@@ -28,6 +28,14 @@ class ProfileController extends Controller
             ->orderBy('name')
             ->get();
 
+        if (($user->role ?? null) === 'client') {
+            return view('dashboard.client_profile', [
+                'user'        => $user,
+                'profile'     => $profile,
+                'specialties' => collect(),
+            ]);
+        }
+
         return view('profile.edit', [
             'user'        => $user,
             'profile'     => $profile,

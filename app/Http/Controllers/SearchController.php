@@ -22,6 +22,10 @@ class SearchController extends Controller
     public function search(Request $request)
     {
         $q = trim((string) $request->input('q', ''));
+        $word = trim((string) $request->input('word', ''));
+        $sort = trim((string) $request->input('sort', 'rating_desc'));
+        $featured = $request->boolean('featured', false);
+        $all = $request->boolean('all', false);
 
         // Nueva fuente de verdad para ubicación:
         $provinceId   = trim((string) $request->input('province_id', ''));
@@ -41,7 +45,12 @@ class SearchController extends Controller
         // Base de búsqueda
         $base = Profile::query()
             ->with('specialties')
-            ->whereIn('status', ['approved', 'active']);
+            ->whereIn('status', ['approved', 'active'])
+            ->where('is_suspended', false);
+
+        if ($featured) {
+            $base->whereHas('reviews');
+        }
 
         // q: texto libre -> match parcial contra specialties.name (case-insensitive)
         if ($q !== '') {
@@ -56,6 +65,39 @@ class SearchController extends Controller
             });
         }
 
+        // Filtro extra por palabra (nombre, descripción o especialidades)
+        if ($word !== '') {
+            $needleWord = mb_strtolower($word);
+
+            $base->where(function ($w) use ($needleWord) {
+                if (DB::getDriverName() === 'pgsql') {
+                    $w->where('display_name', 'ILIKE', "%{$needleWord}%")
+                      ->orWhere('about', 'ILIKE', "%{$needleWord}%")
+                      ->orWhereHas('specialties', function ($s) use ($needleWord) {
+                          $s->where('name', 'ILIKE', "%{$needleWord}%");
+                      });
+                } else {
+                    $w->whereRaw('LOWER(display_name) LIKE ?', ["%{$needleWord}%"])
+                      ->orWhereRaw('LOWER(about) LIKE ?', ["%{$needleWord}%"])
+                      ->orWhereHas('specialties', function ($s) use ($needleWord) {
+                          $s->whereRaw('LOWER(name) LIKE ?', ["%{$needleWord}%"]);
+                      });
+                }
+            });
+        }
+
+        $applySort = function ($query) use ($sort) {
+            if ($sort === 'name_desc') {
+                return $query->orderBy('display_name', 'desc');
+            }
+
+            // default: relevancia = mejor rating
+            return $query
+                ->withAvg('reviews', 'rating')
+                ->orderByRaw('COALESCE(reviews_avg_rating, 0) DESC')
+                ->orderByDesc('id');
+        };
+
         /**
          * Nueva lógica de ubicación:
          * - Si hay city_id: traer presenciales en esa ciudad.
@@ -63,8 +105,58 @@ class SearchController extends Controller
          *
          * Nota: agrupamos con where(function) para que el OR no rompa el resto de filtros.
          */
+        $perPage = $featured ? 10 : 15;
+
+        if ($featured) {
+            $results = $applySort($base)
+                ->paginate($perPage);
+
+            return view('search.results', [
+                'results' => $results,
+                'q'       => $q,
+                'word'    => $word,
+                'sort'    => $sort,
+                'featured' => true,
+                'all'     => $all,
+                'loc'     => $locText,
+                'lat'     => $lat,
+                'lng'     => $lng,
+                'r'       => $radius,
+                'remote'  => $remote,
+
+                'province_id'   => $provinceId,
+                'province_name' => $provinceName,
+                'city_id'       => $cityId,
+                'city_name'     => $cityName,
+            ]);
+        }
+
+        if ($all) {
+            $results = $applySort($base)
+                ->paginate($perPage);
+
+            return view('search.results', [
+                'results' => $results,
+                'q'       => $q,
+                'word'    => $word,
+                'sort'    => $sort,
+                'featured' => false,
+                'all'     => true,
+                'loc'     => $locText,
+                'lat'     => $lat,
+                'lng'     => $lng,
+                'r'       => $radius,
+                'remote'  => $remote,
+
+                'province_id'   => $provinceId,
+                'province_name' => $provinceName,
+                'city_id'       => $cityId,
+                'city_name'     => $cityName,
+            ]);
+        }
+
         if ($cityId !== '') {
-            $results = $base
+            $results = $applySort($base
                 ->where(function ($w) use ($cityId, $provinceId, $remote) {
                     $w->where(function ($z) use ($cityId, $provinceId) {
                         $z->where('city_id', $cityId)
@@ -76,17 +168,20 @@ class SearchController extends Controller
                         $w->orWhere('mode_remote', true);
                     }
                 })
-                ->latest('id')
-                ->paginate(20);
+            )->paginate($perPage);
 
             return view('search.results', [
                 'results' => $results,
                 'q'       => $q,
+                'word'    => $word,
+                'sort'    => $sort,
                 'loc'     => $locText,
                 'lat'     => $lat,
                 'lng'     => $lng,
                 'r'       => $radius,
                 'remote'  => $remote,
+                'featured' => false,
+                'all'     => false,
 
                 // nuevos (por si la vista los quiere usar)
                 'province_id'   => $provinceId,
@@ -101,18 +196,21 @@ class SearchController extends Controller
          * - Si remote=1: mostrar remotos
          * - Si remote=0: mostrar presenciales (sin filtrar por ciudad)
          */
-        $results = $base
+        $results = $applySort($base
             ->when(
                 $remote,
                 fn ($qq) => $qq->where('mode_remote', true),
                 fn ($qq) => $qq->where('mode_presential', true)
             )
-            ->latest('id')
-            ->paginate(20);
+        )->paginate($perPage);
 
         return view('search.results', [
             'results' => $results,
             'q'       => $q,
+            'word'    => $word,
+            'sort'    => $sort,
+            'featured' => false,
+            'all'     => false,
             'loc'     => $locText,
             'lat'     => $lat,
             'lng'     => $lng,
@@ -128,7 +226,7 @@ class SearchController extends Controller
 
     public function show(string $slug, Request $request)
     {
-        $profile = Profile::with(['specialties'])
+        $profile = Profile::with(['specialties', 'reviews.user'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -136,6 +234,12 @@ class SearchController extends Controller
         $isOwner = auth()->check() && auth()->id() === $profile->user_id;
         $isAdmin = auth()->check() && auth()->user()->can('admin');
         $preview = $request->boolean('preview');
+
+        if ($profile->is_suspended) {
+            if (!$isAdmin) {
+                abort(404);
+            }
+        }
 
         // Si NO está aprobado, solo lo pueden ver dueño o admin con ?preview=1
         if ($profile->status !== 'approved') {
@@ -151,6 +255,19 @@ class SearchController extends Controller
             $profile->increment('views_count');
         }
 
-        return view('profiles.show', ['profile' => $profile]);
+        $reviewsCount = $profile->reviews->count();
+        $avgRating = $reviewsCount ? round($profile->reviews->avg('rating'), 1) : null;
+
+        $userReview = null;
+        if (auth()->check() && (auth()->user()->role ?? null) === 'client') {
+            $userReview = $profile->reviews->firstWhere('user_id', auth()->id());
+        }
+
+        return view('profiles.show', [
+            'profile' => $profile,
+            'avgRating' => $avgRating,
+            'reviewsCount' => $reviewsCount,
+            'userReview' => $userReview,
+        ]);
     }
 }

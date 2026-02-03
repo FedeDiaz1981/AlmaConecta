@@ -12,7 +12,7 @@
                 </div>
             @endif
 
-            <div class="mb-4 flex flex-wrap gap-3">
+            <div class="mb-4 flex flex-wrap items-center gap-3">
                 <a href="{{ route('admin.specialties.create') }}"
                    class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gold text-blueDeep text-sm font-semibold hover:bg-goldStrong transition">
                     + Nueva especialidad
@@ -21,6 +21,25 @@
                    class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-blueMid text-sm text-silver/90 hover:bg-blueMid/40 transition">
                     Carga masiva
                 </a>
+
+                <form method="GET" action="{{ route('admin.specialties.index') }}"
+                      class="flex items-center gap-2 ml-auto w-full sm:w-auto">
+                    <input type="text"
+                           name="q"
+                           value="{{ $q ?? '' }}"
+                           placeholder="Buscar especialidad..."
+                           class="w-full sm:w-64 rounded-xl border border-blueMid bg-blueDeep/60 px-3 py-2 text-sm text-silver placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold">
+                    <button type="submit"
+                            class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-blueMid/60 text-silver text-sm font-semibold hover:bg-blueMid/80 transition">
+                        Buscar
+                    </button>
+                    @if(!empty($q))
+                        <a href="{{ route('admin.specialties.index') }}"
+                           class="text-xs text-silver/70 hover:text-silver">
+                            Limpiar
+                        </a>
+                    @endif
+                </form>
             </div>
 
             <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl overflow-hidden">
