@@ -437,15 +437,9 @@
                                     value="{{ old('video_url', $profile->video_url) }}" {{ $locked ? 'disabled' : '' }}>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-silver mb-1">Template</label>
-                                <select name="template_key"
-                                    class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
-                                    {{ $locked ? 'disabled' : '' }}>
-                                    <option value="a" {{ old('template_key', $profile->template_key) === 'a' ? 'selected' : '' }}>Template A</option>
-                                    <option value="b" {{ old('template_key', $profile->template_key) === 'b' ? 'selected' : '' }}>Template B</option>
-                                </select>
-                            </div>
+                            {{-- Template fijo por ahora --}}
+                            <input type="hidden" name="template_key"
+                                value="{{ old('template_key', $profile->template_key ?: 'a') }}">
                         </div>
                     </section>
 

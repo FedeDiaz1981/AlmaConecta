@@ -241,6 +241,12 @@ class ProviderProfileController extends Controller
                 ->withInput();
         }
 
+        $resolvedTemplate = $request->input('template_key');
+        if (!$resolvedTemplate) {
+            $resolvedTemplate = $profile->template_key ?: 'a';
+            $request->merge(['template_key' => $resolvedTemplate]);
+        }
+
         $data = $request->validate([
             'display_name'   => 'required|string|max:255',
             'service_id'     => 'nullable|exists:services,id',

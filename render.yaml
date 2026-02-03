@@ -1,4 +1,4 @@
-databases:
+﻿databases:
   - name: alma-db
     plan: free
     databaseName: alma
@@ -37,13 +37,8 @@ services:
           sleep 2
         done
 
-        if [ "${RUN_FRESH:-0}" = "1" ]; then
-          echo "RUN_FRESH=1 → php artisan migrate:fresh --force"
-          php artisan migrate:fresh --force
-        else
-          echo "RUN_FRESH not set → php artisan migrate --force"
-          php artisan migrate --force
-        fi
+        echo "==> Running migrations"
+        php artisan migrate --force
 
         echo "==> Storage symlink"
         echo "==> Ensuring storage directories"
@@ -103,8 +98,3 @@ services:
         fromDatabase:
           name: alma-db
           property: password
-
-      # Fuerza reset completo de tablas en el próximo deploy
-      # Cambialo a "0" cuando ya esté estable.
-      - key: RUN_FRESH
-        value: "0"
