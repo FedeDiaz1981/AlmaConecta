@@ -35,6 +35,8 @@ class Profile extends Model
 
         // dirección
         'address',
+        'address_street',
+        'address_number',
         'address_extra',
 
         // coords

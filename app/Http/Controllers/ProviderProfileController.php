@@ -24,11 +24,39 @@ class ProviderProfileController extends Controller
             ]
         );
 
-        // ediciÃ³n pendiente (para bloquear el form)
+        // edición pendiente (para bloquear el form)
         $pendingEdit = Edit::where('profile_id', $profile->id)
             ->where('status', 'pending')
             ->latest()
             ->first();
+
+        // Si hay edicion pendiente, mostramos esos valores en el form
+        if ($pendingEdit) {
+            $payload = is_array($pendingEdit->payload)
+                ? $pendingEdit->payload
+                : (json_decode($pendingEdit->payload, true) ?? []);
+
+            $keys = [
+                'province_id',
+                'province_name',
+                'city_id',
+                'city_name',
+                'address',
+                'address_street',
+                'address_number',
+                'address_extra',
+                'lat',
+                'lng',
+                'mode_presential',
+                'mode_remote',
+            ];
+
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $payload)) {
+                    $profile->{$key} = $payload[$key];
+                }
+            }
+        }
 
         // Servicios
         $services = Service::orderBy('name')->get();
@@ -54,7 +82,7 @@ class ProviderProfileController extends Controller
     /**
      * Cliente HTTP:
      * - En local: sin verificar SSL (para evitar cURL error 60 en Windows)
-     * - En otros entornos: verificaciÃ³n normal
+     * - En otros entornos: verificación normal
      */
     protected function httpClient()
     {
@@ -64,15 +92,15 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Normaliza texto para comparar (minÃºsculas, sin tildes, espacios).
+     * Normaliza texto para comparar (minúsculas, sin tildes, espacios).
      */
     protected function normalizePlace(string $s): string
     {
         $s = mb_strtolower(trim($s));
         $s = preg_replace('/\s+/', ' ', $s);
 
-        // NormalizaciÃ³n simple de acentos
-        $map = ['Ã¡'=>'a','Ã©'=>'e','Ã­'=>'i','Ã³'=>'o','Ãº'=>'u','Ã¼'=>'u','Ã±'=>'n'];
+        // Normalización simple de acentos
+        $map = ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n'];
         $s = strtr($s, $map);
 
         // Limpieza leve de signos comunes
@@ -82,7 +110,7 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Alias/casos especiales para comparaciÃ³n de provincias/ciudades.
+     * Alias/casos especiales para comparación de provincias/ciudades.
      * (ej: CABA)
      */
     protected function normalizeWithAliases(string $s): string
@@ -98,7 +126,7 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Geocodifica una direcciÃ³n con Nominatim y devuelve [lat, lng].
+     * Geocodifica una dirección con Nominatim y devuelve [lat, lng].
      * Cachea para no pegarle siempre al servicio.
      */
     protected function geocodeAddress(string $query): ?array
@@ -146,6 +174,24 @@ class ProviderProfileController extends Controller
             ];
         });
     }
+    /**
+     * Obtiene coordenadas del centro de una ciudad (fallback).
+     */
+    protected function cityCenterCoords(string $cityName, string $provinceName): ?array
+    {
+        $cityName = trim($cityName);
+        $provinceName = trim($provinceName);
+
+        if ($cityName === "" || $provinceName === "") return null;
+
+        $cacheKey = 'geo:city-center:' . md5($cityName . '|' . $provinceName);
+
+        return Cache::remember($cacheKey, now()->addDays(30), function () use ($cityName, $provinceName) {
+            $q = $cityName . ', ' . $provinceName . ', Argentina';
+            return $this->geocodeAddress($q);
+        });
+    }
+
 
     /**
      * Reverse geocoding (Nominatim) para obtener addressdetails.
@@ -216,14 +262,8 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * DirecciÃ³n: debe tener altura (al menos 1 dÃ­gito)
+     * Dirección: debe tener altura (al menos 1 dígito)
      */
-    protected function addressHasNumber(?string $address): bool
-    {
-        $a = trim((string)$address);
-        if ($a === '') return false;
-        return preg_match('/\d+/', $a) === 1;
-    }
 
     public function saveDraft(Request $request)
     {
@@ -237,7 +277,7 @@ class ProviderProfileController extends Controller
 
         if ($alreadyPending) {
             return back()
-                ->withErrors(['general' => 'Ya tenÃ©s una peticiÃ³n en revisiÃ³n. AnulÃ¡la para poder volver a editar.'])
+                ->withErrors(['general' => 'Ya tenés una petición en revisión. Anulála para poder volver a editar.'])
                 ->withInput();
         }
 
@@ -261,7 +301,9 @@ class ProviderProfileController extends Controller
             'city_id'        => 'nullable|string|max:80',
             'city_name'      => 'nullable|string|max:120',
 
-            // DirecciÃ³n textual (sin ciudad/provincia)
+            // Dirección textual (sin ciudad/provincia)
+            'address_street' => 'nullable|string|max:180',
+            'address_number' => 'nullable|string|max:50',
             'address'        => 'nullable|string|max:255',
             'address_extra'  => 'nullable|string|max:120',
 
@@ -278,22 +320,38 @@ class ProviderProfileController extends Controller
             'specialties'    => 'required|array|min:1',
             'specialties.*'  => 'integer|exists:specialties,id',
         ], [
-            'display_name.required' => 'El nombre pÃºblico es obligatorio.',
+            'display_name.required' => 'El nombre público es obligatorio.',
             'modality.required'     => 'La modalidad es obligatoria.',
             'template_key.required' => 'El template es obligatorio.',
-            'specialties.required'  => 'TenÃ©s que seleccionar al menos una especialidad.',
+            'specialties.required'  => 'Tenés que seleccionar al menos una especialidad.',
         ]);
+
+        $addressStreet = trim((string)($data['address_street'] ?? ''));
+        $addressNumber = trim((string)($data['address_number'] ?? ''));
+        $addressText = trim((string)($data['address'] ?? ''));
+
+        if ($addressStreet !== '' || $addressNumber !== '') {
+            $addressText = trim(implode(' ', array_filter([$addressStreet, $addressNumber])));
+        } elseif ($addressText !== '') {
+            if (preg_match('/^(.*?)[,]?\s+(\d[\d\w\-\/]*)$/u', $addressText, $m)) {
+                $addressStreet = trim($m[1]);
+                $addressNumber = trim($m[2]);
+            }
+        }
+
+        $data['address'] = $addressText !== '' ? $addressText : null;
+        $data['address_street'] = $addressStreet !== '' ? $addressStreet : null;
+        $data['address_number'] = $addressNumber !== '' ? $addressNumber : null;
 
         // modalidad -> flags
         $mode_remote     = $data['modality'] === 'remoto' || $data['modality'] === 'ambas';
         $mode_presential = $data['modality'] === 'presencial' || $data['modality'] === 'ambas';
 
-        // Si es presencial (o ambas), exigimos ciudad/provincia + address + lat/lng (para forzar selecciÃ³n del predictivo)
         if ($mode_presential) {
             $missing = [];
             if (empty($data['province_id']) || empty($data['province_name'])) $missing[] = 'Provincia';
             if (empty($data['city_id']) || empty($data['city_name'])) $missing[] = 'Ciudad';
-            if (empty($data['address'])) $missing[] = 'DirecciÃ³n';
+            if (empty($data['address'])) $missing[] = 'Dirección';
 
             if (!empty($missing)) {
                 return back()
@@ -301,18 +359,7 @@ class ProviderProfileController extends Controller
                     ->withInput();
             }
 
-            if (!$this->addressHasNumber($data['address'] ?? null)) {
-                return back()
-                    ->withErrors(['address' => 'La direcciÃ³n debe incluir calle y altura (por ejemplo: "Corrientes 1234").'])
-                    ->withInput();
-            }
 
-            // Forzamos a que venga validada por el autocomplete (lat/lng)
-            if (empty($data['lat']) || empty($data['lng'])) {
-                return back()
-                    ->withErrors(['address' => 'TenÃ©s que elegir una sugerencia vÃ¡lida para validar la direcciÃ³n.'])
-                    ->withInput();
-            }
         }
 
         // foto
@@ -321,58 +368,67 @@ class ProviderProfileController extends Controller
             $photoPath = $request->file('photo')->store('profiles', 'public');
         }
 
-        // Geocoding + VALIDACIÃ“N ciudad/provincia
+        // Geocoding + VALIDACION ciudad/provincia
         $lat = null;
         $lng = null;
 
         if ($mode_presential) {
-            // Preferimos coords del autocomplete
-            $lat = (float) $data['lat'];
-            $lng = (float) $data['lng'];
+            $lat = !empty($data['lat']) ? (float) $data['lat'] : null;
+            $lng = !empty($data['lng']) ? (float) $data['lng'] : null;
 
-            // Validar que pertenezcan a la ciudad/provincia seleccionadas
-            $ok = $this->coordsBelongToSelectedCity([
-                'province_name' => $data['province_name'] ?? '',
-                'city_name'     => $data['city_name'] ?? '',
-            ], $lat, $lng);
-
-            if (!$ok) {
-                return back()
-                    ->withErrors(['address' => 'La direcciÃ³n ingresada no pertenece a la ciudad seleccionada. ElegÃ­ una sugerencia vÃ¡lida o cambiÃ¡ la ciudad.'])
-                    ->withInput();
-            }
-
-            // Compatibilidad extra: si por algÃºn motivo vinieron coords vacÃ­as (aunque arriba las exigimos)
-            // geocodificamos como fallback.
-            if (!$lat || !$lng) {
-                $geoQuery = trim((string)($data['address'] ?? '')) . ', ' .
-                            trim((string)($data['city_name'] ?? '')) . ', ' .
-                            trim((string)($data['province_name'] ?? '')) . ', Argentina';
-
-                $geo = $this->geocodeAddress($geoQuery);
-
-                if (!$geo) {
-                    return back()
-                        ->withErrors(['address' => 'No pudimos validar esa direcciÃ³n en la ciudad seleccionada. ProbÃ¡ con otra mÃ¡s especÃ­fica (calle y nÃºmero).'])
-                        ->withInput();
-                }
-
-                $lat = $geo['lat'];
-                $lng = $geo['lng'];
-
-                $ok2 = $this->coordsBelongToSelectedCity([
+            if ($lat && $lng) {
+                $ok = $this->coordsBelongToSelectedCity([
                     'province_name' => $data['province_name'] ?? '',
                     'city_name'     => $data['city_name'] ?? '',
                 ], $lat, $lng);
 
-                if (!$ok2) {
-                    return back()
-                        ->withErrors(['address' => 'La direcciÃ³n ingresada no pertenece a la ciudad seleccionada. VerificÃ¡ calle y nÃºmero o elegÃ­ la ciudad correcta.'])
-                        ->withInput();
+                if (!$ok) {
+                    $lat = null;
+                    $lng = null;
                 }
             }
-        }
 
+            $geoQuery = trim((string)($data['address'] ?? '')) . ', ' .
+                        trim((string)($data['city_name'] ?? '')) . ', ' .
+                        trim((string)($data['province_name'] ?? '')) . ', Argentina';
+
+            if (!$lat || !$lng) {
+                $geo = $this->geocodeAddress($geoQuery);
+
+                if ($geo) {
+                    $lat = $geo['lat'];
+                    $lng = $geo['lng'];
+
+                    $ok2 = $this->coordsBelongToSelectedCity([
+                        'province_name' => $data['province_name'] ?? '',
+                        'city_name'     => $data['city_name'] ?? '',
+                    ], $lat, $lng);
+
+                    if (!$ok2) {
+                        $lat = null;
+                        $lng = null;
+                    }
+                }
+            }
+
+            if (!$lat || !$lng) {
+                $center = $this->cityCenterCoords(
+                    (string)($data['city_name'] ?? ''),
+                    (string)($data['province_name'] ?? '')
+                );
+
+                if ($center) {
+                    $lat = $center['lat'];
+                    $lng = $center['lng'];
+                }
+            }
+
+            if (!$lat || !$lng) {
+                return back()
+                    ->withErrors(['address' => 'No pudimos calcular la ubicacion. Proba con otra direccion o cambia la ciudad.'])
+                    ->withInput();
+            }
+        }
         // Compatibilidad con el resto del sitio actual
         $derivedState   = $data['province_name'] ?? null;
         $derivedCity    = $data['city_name'] ?? null;
@@ -394,8 +450,10 @@ class ProviderProfileController extends Controller
             'city_id'         => $data['city_id'] ?? null,
             'city_name'       => $data['city_name'] ?? null,
 
-            // DirecciÃ³n + extra
+            // Dirección + extra
             'address'         => $data['address'] ?? null,
+            'address_street'  => $data['address_street'] ?? null,
+            'address_number'  => $data['address_number'] ?? null,
             'address_extra'   => $data['address_extra'] ?? null,
 
             // compatibilidad / display actual
@@ -417,13 +475,47 @@ class ProviderProfileController extends Controller
             $payload['photo_path'] = $photoPath;
         }
 
+        // Persistimos ubicacion en el perfil para que quede guardada inmediatamente
+        $locationKeys = [
+            'province_id',
+            'province_name',
+            'city_id',
+            'city_name',
+            'address',
+            'address_street',
+            'address_number',
+            'address_extra',
+            'lat',
+            'lng',
+        ];
+
+        $locationUpdate = [];
+        foreach ($locationKeys as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null && $data[$key] !== '') {
+                $locationUpdate[$key] = $data[$key];
+            }
+        }
+
+        if (!empty($locationUpdate)) {
+            if (!empty($data['province_name'])) {
+                $locationUpdate['state'] = $data['province_name'];
+            }
+            if (!empty($data['city_name'])) {
+                $locationUpdate['city'] = $data['city_name'];
+            }
+            $locationUpdate['country'] = $profile->country ?: 'AR';
+
+            $profile->fill($locationUpdate);
+            $profile->save();
+        }
+
         Edit::create([
             'profile_id' => $profile->id,
             'payload'    => $payload,
             'status'     => 'pending',
         ]);
 
-        return back()->with('status', 'Borrador enviado a revisiÃ³n.');
+        return back()->with('status', 'Borrador enviado a revisión.');
     }
 
     public function cancelPending(Request $request)
@@ -437,7 +529,7 @@ class ProviderProfileController extends Controller
             ->first();
 
         if (!$pending) {
-            return back()->with('status', 'No hay una peticiÃ³n pendiente.');
+            return back()->with('status', 'No hay una petición pendiente.');
         }
 
         // limpiar foto subida si no es la actual del perfil
@@ -458,6 +550,6 @@ class ProviderProfileController extends Controller
         $pending->reason      = 'Cancelado por el usuario';
         $pending->save();
 
-        return back()->with('status', 'PeticiÃ³n anulada. Ya podÃ©s editar tu perfil.');
+        return back()->with('status', 'Petición anulada. Ya podés editar tu perfil.');
     }
 }

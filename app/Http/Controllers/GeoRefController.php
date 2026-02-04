@@ -171,64 +171,184 @@ class GeoRefController extends Controller
             return response()->json(['items' => []], 200);
         }
 
-        $client = $this->httpClient();
+        $cacheKey = 'nominatim:addr:v2:' . md5($q . '|' . $cityName . '|' . $provinceName);
 
-        $bbox = $this->getCityBbox($cityName, $provinceName);
-        if (!$bbox) return response()->json(['items' => []], 200);
+        $items = Cache::remember($cacheKey, now()->addHours(6), function () use ($q, $cityName, $provinceName) {
+            $client = $this->httpClient();
+            $bbox = $this->getCityBbox($cityName, $provinceName);
 
-        $viewbox = implode(',', [$bbox['west'], $bbox['north'], $bbox['east'], $bbox['south']]);
-
-        $res = $client->withHeaders([
-                'User-Agent' => 'alma-conecta/1.0 (+https://example.com)',
-            ])
-            ->timeout(12)
-            ->get('https://nominatim.openstreetmap.org/search', [
+            $baseParams = [
                 'format' => 'json',
-                'limit' => 8,
+                'limit' => 10,
                 'addressdetails' => 1,
                 'accept-language' => 'es',
                 'countrycodes' => 'ar',
-                'viewbox' => $viewbox,
-                'bounded' => 1,
-                'q' => $q . ', ' . $cityName,
+            ];
+
+            $queries = [];
+
+            if ($bbox) {
+                $viewbox = implode(',', [$bbox['west'], $bbox['north'], $bbox['east'], $bbox['south']]);
+                $queries[] = array_merge($baseParams, [
+                    'street' => $q,
+                    'city' => $cityName,
+                    'state' => $provinceName,
+                    'country' => 'Argentina',
+                    'viewbox' => $viewbox,
+                    'bounded' => 1,
+                ]);
+            }
+
+            $queries[] = array_merge($baseParams, [
+                'q' => $q . ', ' . $cityName . ', ' . $provinceName . ', Argentina',
             ]);
 
-        if (!$res->ok()) {
-            return response()->json(['items' => []], 200);
-        }
+            $data = [];
+            foreach ($queries as $params) {
+                $res = $client->withHeaders([
+                        'User-Agent' => 'alma-conecta/1.0 (+https://example.com)',
+                    ])
+                    ->timeout(12)
+                    ->get('https://nominatim.openstreetmap.org/search', $params);
 
-        $data = $res->json();
-        if (!is_array($data)) {
-            return response()->json(['items' => []], 200);
-        }
+                if ($res->ok()) {
+                    $data = $res->json();
+                    if (is_array($data) && !empty($data)) {
+                        break;
+                    }
+                }
+            }
 
-        $items = collect($data)
-            ->map(function ($r) {
-                $a = $r['address'] ?? [];
+            if (!is_array($data)) {
+                return [];
+            }
 
-                $road = $a['road'] ?? ($a['pedestrian'] ?? ($a['path'] ?? ''));
-                $hn   = $a['house_number'] ?? '';
+            return collect($data)
+                ->map(function ($r) {
+                    $a = $r['address'] ?? [];
 
-                if (!$road || !$hn) return null;
+                    $road = $a['road'] ?? ($a['pedestrian'] ?? ($a['path'] ?? ''));
+                    $hn   = $a['house_number'] ?? '';
 
-                $label = trim($road . ' ' . $hn);
+                    if ((!$road || !$hn) && !empty($r['display_name'])) {
+                        if (preg_match('/^(.*?)[,]?\s+(\d[\d\w\-\/]*)/u', $r['display_name'], $m)) {
+                            $road = $road ?: trim($m[1]);
+                            $hn = $hn ?: trim($m[2]);
+                        }
+                    }
 
-                $lat = isset($r['lat']) ? (float) $r['lat'] : null;
-                $lng = isset($r['lon']) ? (float) $r['lon'] : null;
+                    if (!$road || !$hn) return null;
 
-                if (!$label || !$lat || !$lng) return null;
+                    $label = trim($road . ' ' . $hn);
 
-                return [
-                    'label' => $label,
-                    'lat'   => $lat,
-                    'lng'   => $lng,
-                ];
-            })
-            ->filter()
-            ->unique('label')
-            ->values()
-            ->all();
+                    $lat = isset($r['lat']) ? (float) $r['lat'] : null;
+                    $lng = isset($r['lon']) ? (float) $r['lon'] : null;
+
+                    if (!$label || !$lat || !$lng) return null;
+
+                    return [
+                        'label' => $label,
+                        'lat'   => $lat,
+                        'lng'   => $lng,
+                    ];
+                })
+                ->filter()
+                ->unique('label')
+                ->values()
+                ->all();
+        });
 
         return response()->json(['items' => $items], 200);
+    }
+
+    /**
+     * GET /geo/street-suggest?city_name=...&province_name=...&q=...
+     * Output: { items: [ {label}, ... ] }
+     *
+     * - Devuelve sugerencias de calles dentro del bounding box de la ciudad.
+     */
+    public function streetSuggest(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $cityName = trim((string) $request->query('city_name', ''));
+        $provinceName = trim((string) $request->query('province_name', ''));
+
+        if (mb_strlen($q) < 2 || $cityName === '' || $provinceName === '') {
+            return response()->json(['items' => []], 200);
+        }
+
+        $cacheKey = 'nominatim:street:v1:' . md5($q . '|' . $cityName . '|' . $provinceName);
+
+        $items = Cache::remember($cacheKey, now()->addDays(7), function () use ($q, $cityName, $provinceName) {
+            $client = $this->httpClient();
+
+            $bbox = $this->getCityBbox($cityName, $provinceName);
+            $viewbox = $bbox ? implode(',', [$bbox['west'], $bbox['north'], $bbox['east'], $bbox['south']]) : null;
+
+            $params = [
+                'format' => 'json',
+                'limit' => 10,
+                'addressdetails' => 1,
+                'accept-language' => 'es',
+                'countrycodes' => 'ar',
+                'q' => $q . ', ' . $cityName . ', ' . $provinceName,
+            ];
+
+            if ($viewbox) {
+                $params['viewbox'] = $viewbox;
+                $params['bounded'] = 1;
+            }
+
+            $res = $client->withHeaders([
+                    'User-Agent' => 'alma-conecta/1.0 (+https://example.com)',
+                ])
+                ->timeout(12)
+                ->get('https://nominatim.openstreetmap.org/search', $params);
+
+            if (!$res->ok()) {
+                return [];
+            }
+
+            $data = $res->json();
+            if (!is_array($data)) {
+                return [];
+            }
+
+            return collect($data)
+                ->map(function ($r) {
+                    $a = $r['address'] ?? [];
+                    $road = $a['road'] ?? ($a['pedestrian'] ?? ($a['path'] ?? ''));
+
+                    if (!$road) return null;
+
+                    return [
+                        'label' => trim($road),
+                    ];
+                })
+                ->filter()
+                ->unique('label')
+                ->values()
+                ->all();
+        });
+
+        return response()->json(['items' => $items], 200);
+    }
+
+    /**
+     * GET /geo/street-preload?city_name=...&province_name=...
+     * Precalienta cache (bbox de la ciudad) para acelerar sugerencias.
+     */
+    public function streetPreload(Request $request)
+    {
+        $cityName = trim((string) $request->query('city_name', ''));
+        $provinceName = trim((string) $request->query('province_name', ''));
+
+        if ($cityName === '' || $provinceName === '') {
+            return response()->json(['ok' => false], 200);
+        }
+
+        $bbox = $this->getCityBbox($cityName, $provinceName);
+
+        return response()->json(['ok' => (bool) $bbox], 200);
     }
 }

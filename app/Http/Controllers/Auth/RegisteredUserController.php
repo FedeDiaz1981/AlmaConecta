@@ -29,14 +29,20 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (!$request->filled('account_type')) {
+            $request->merge([
+                'account_type' => 'provider',
+            ]);
+        }
+
         $request->validate([
             'account_type' => ['required', 'in:provider,client'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'document_type' => ['required_if:account_type,client', 'string', 'max:30'],
-            'document_number' => ['required_if:account_type,client', 'string', 'max:50'],
-            'phone' => ['required_if:account_type,client', 'string', 'max:30'],
+            'document_type' => ['nullable', 'string', 'max:30', 'required_if:account_type,client'],
+            'document_number' => ['nullable', 'string', 'max:50', 'required_if:account_type,client'],
+            'phone' => ['nullable', 'string', 'max:30', 'required_if:account_type,client'],
         ]);
 
         $accountType = $request->string('account_type')->toString();

@@ -1,8 +1,8 @@
-﻿databases:
+databases:
   - name: alma-db
     plan: free
     databaseName: alma
-    ipAllowList: []  # agrega IPs si las necesitás
+    ipAllowList: []  # agrega IPs si las necesit�s
 
 services:
   - type: web
@@ -57,15 +57,15 @@ services:
       - key: APP_ENV
         value: production
 
-      # ⚠️ Dejalo en "true" sólo mientras estás depurando errores 500.
+      # ?? Dejalo en "true" s�lo mientras est�s depurando errores 500.
       - key: APP_DEBUG
         value: "true"
 
-      # Setealo en el dashboard (no en git). Formato típico: base64:XXXXXXXX
+      # Setealo en el dashboard (no en git). Formato t�pico: base64:XXXXXXXX
       - key: APP_KEY
         sync: false
 
-      # Útil para generar URLs absolutas correctas
+      # �til para generar URLs absolutas correctas
       - key: APP_URL
         value: https://almaconecta-1.onrender.com
 
@@ -75,7 +75,7 @@ services:
       - key: LOG_LEVEL
         value: debug
 
-      # Conexión a la DB administrada por Render
+      # Conexi�n a la DB administrada por Render
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -98,3 +98,5 @@ services:
         fromDatabase:
           name: alma-db
           property: password
+      - key: SESSION_DRIVER
+        value: file

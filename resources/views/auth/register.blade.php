@@ -4,7 +4,22 @@
 
         @php
             $accountType = old('account_type', request()->query('account_type', 'provider'));
+            $showClientFields = $accountType === 'client'
+                || $errors->has('document_type')
+                || $errors->has('document_number')
+                || $errors->has('phone');
         @endphp
+
+        @if ($errors->any())
+            <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p class="font-medium">Revisá los campos marcados para continuar:</p>
+                <ul class="mt-2 list-disc pl-5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <!-- Account Type -->
         <div>
@@ -16,6 +31,7 @@
                            name="account_type"
                            value="provider"
                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                           required
                            {{ $accountType === 'provider' ? 'checked' : '' }}>
                     <span>Soy profesional</span>
                 </label>
@@ -25,6 +41,7 @@
                            name="account_type"
                            value="client"
                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                           required
                            {{ $accountType === 'client' ? 'checked' : '' }}>
                     <span>Busco profesional</span>
                 </label>
@@ -49,7 +66,7 @@
 
         <!-- Client fields -->
         <div id="client-fields"
-             class="mt-4 space-y-4 {{ $accountType === 'client' ? '' : 'hidden' }}">
+             class="mt-4 space-y-4 {{ $showClientFields ? '' : 'hidden' }}">
             <div>
                 <x-input-label for="document_type" :value="__('Tipo de documento')" />
                 <x-text-input id="document_type"

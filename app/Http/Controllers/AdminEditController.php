@@ -77,6 +77,8 @@ class AdminEditController extends Controller
             $setIfExists($updates, 'city_name');
 
             $setIfExists($updates, 'address');
+            $setIfExists($updates, 'address_street');
+            $setIfExists($updates, 'address_number');
             $setIfExists($updates, 'address_extra');
 
             $setIfExists($updates, 'lat');
@@ -127,18 +129,8 @@ class AdminEditController extends Controller
             $isPresential = (bool) $profile->mode_presential;
 
             if (!$isPresential) {
-                $profile->province_id = null;
-                $profile->province_name = null;
-                $profile->city_id = null;
-                $profile->city_name = null;
-                $profile->address = null;
-                $profile->address_extra = null;
-                $profile->lat = null;
-                $profile->lng = null;
-
-                // compat
-                $profile->state = null;
-                $profile->city = null;
+                // No limpiamos ubicaciÃ³n automÃ¡ticamente:
+                // permitimos guardar provincia/ciudad/direcciÃ³n aunque sea remoto.
                 $profile->country = $profile->country ?: 'AR';
             } else {
                 // si es presencial, aseguramos country (por prolijidad)

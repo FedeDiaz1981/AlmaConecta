@@ -211,6 +211,11 @@ Route::get('/geo/street-suggest', function () use ($safe) {
     return $safe(fn () => app(GeoRefController::class)->streetSuggest(request()));
 })->name('geo.street_suggest');
 
+// Pre-carga de bbox para acelerar sugerencias de calles
+Route::get('/geo/street-preload', function () use ($safe) {
+    return $safe(fn () => app(GeoRefController::class)->streetPreload(request()));
+})->name('geo.street_preload');
+
 /*
 |--------------------------------------------------------------------------
 | Búsqueda

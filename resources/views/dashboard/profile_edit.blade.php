@@ -7,15 +7,30 @@
         $locked = isset($pendingEdit) && $pendingEdit;
 
         $currentProvinceId = old('province_id', $profile->province_id ?? '');
-        $currentProvinceName = old('province_name', $profile->province_name ?? '');
+        $currentProvinceName = old('province_name', $profile->province_name ?? ($profile->state ?? ''));
         $currentCityId = old('city_id', $profile->city_id ?? '');
-        $currentCityName = old('city_name', $profile->city_name ?? '');
+        $currentCityName = old('city_name', $profile->city_name ?? ($profile->city ?? ''));
 
         $currentAddress = old('address', $profile->address ?? '');
         $currentAddressExtra = old('address_extra', $profile->address_extra ?? '');
 
         $currentLat = old('lat', $profile->lat ?? '');
         $currentLng = old('lng', $profile->lng ?? '');
+
+        $currentAddressStreet = old('address_street', $profile->address_street ?? '');
+        $currentAddressNumber = old('address_number', $profile->address_number ?? '');
+
+        if ($currentAddress === '' && ($currentAddressStreet !== '' || $currentAddressNumber !== '')) {
+            $currentAddress = trim(implode(' ', array_filter([$currentAddressStreet, $currentAddressNumber])));
+        }
+
+        if ($currentAddressStreet === '' && $currentAddressNumber === '' && is_string($currentAddress)) {
+            $addrTrim = trim($currentAddress);
+            if ($addrTrim !== '' && preg_match('/^(.*?)[,]?\s+(\d[\d\w\-\/]*)$/u', $addrTrim, $m)) {
+                $currentAddressStreet = trim($m[1]);
+                $currentAddressNumber = trim($m[2]);
+            }
+        }
     @endphp
 
     <div class="py-10 bg-blueDeep">
@@ -220,7 +235,7 @@
                                 @enderror
                             </div>
 
-                            {{-- Dirección validada --}}
+                            {{-- Direccion validada --}}
                             <style>
                                 .addr-wrap {
                                     position: relative;
@@ -251,16 +266,45 @@
                                 .addr-item:hover {
                                     background: rgba(15, 23, 42, .95);
                                 }
+
+                                .addr-spinner {
+                                    width: 12px;
+                                    height: 12px;
+                                    border: 2px solid rgba(226, 232, 240, .6);
+                                    border-top-color: transparent;
+                                    border-radius: 999px;
+                                    animation: addr-spin .8s linear infinite;
+                                }
+
+                                @keyframes addr-spin {
+                                    to {
+                                        transform: rotate(360deg);
+                                    }
+                                }
                             </style>
 
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-silver mb-1">Dirección (calle y número)</label>
+                                <label class="block text-sm font-medium text-silver mb-1">Direccion (calle y numero)</label>
 
-                                <div class="addr-wrap">
-                                    <input id="address_input" type="text" autocomplete="off"
-                                        class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
-                                        placeholder="Ej: Corrientes 1234" value="{{ $currentAddress }}" {{ $locked ? 'disabled' : '' }}>
-                                    <div id="address_list" class="addr-list hidden"></div>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="addr-wrap">
+                                        <input id="address_street" name="address_street" type="text" autocomplete="off"
+                                            class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
+                                            placeholder="Ej: Corrientes" value="{{ $currentAddressStreet }}" {{ $locked ? 'disabled' : '' }}>
+                                        <div id="address_street_list" class="addr-list hidden"></div>
+                                    </div>
+
+                                    <div class="addr-wrap">
+                                        <input id="address_number" name="address_number" type="text" autocomplete="off"
+                                            class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2.5 text-sm text-blueDeep placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold disabled:bg-blueNight/30 disabled:text-silver/60"
+                                            placeholder="Ej: 1234" value="{{ $currentAddressNumber }}" {{ $locked ? 'disabled' : '' }}>
+                                        <div id="address_validate_list" class="addr-list hidden"></div>
+                                    </div>
+                                </div>
+
+                                <div id="street_preload" class="hidden mt-2 text-[11px] text-silver/70 flex items-center gap-2">
+                                    <span class="addr-spinner"></span>
+                                    Cargando calles...
                                 </div>
 
                                 <input type="hidden" name="address" id="address" value="{{ $currentAddress }}">
@@ -270,10 +314,10 @@
                                 @enderror
 
                                 <p class="text-[11px] text-silver/60 mt-1">
-                                    Escribí calle y altura. Recién ahí vas a ver opciones para validar (tenés que elegir
-                                    una).
+                                    Escribi calle y altura. Usamos esa combinacion para calcular coordenadas. Si no se puede, tomamos el centro de la ciudad.
                                 </p>
                             </div>
+
 
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-silver mb-1">Piso / Depto (opcional)</label>
@@ -459,7 +503,7 @@
     <script>
         (function () {
             const locked = @json($locked);
-            if (locked) return;
+            const isLocked = !!locked;
 
             const provinciaSelect = document.getElementById('provinciaSelect');
             const ciudadSelect = document.getElementById('ciudadSelect');
@@ -470,20 +514,26 @@
             const cityNameEl = document.getElementById('city_name');
 
             const locationPreview = document.getElementById('locationPreview');
+            const streetPreloadEl = document.getElementById('street_preload');
 
-            const addressInput = document.getElementById('address_input');
+            const addressStreetInput = document.getElementById('address_street');
+            const addressNumberInput = document.getElementById('address_number');
             const addressHidden = document.getElementById('address');
             const latEl = document.getElementById('lat');
             const lngEl = document.getElementById('lng');
 
             const clearAddress = () => {
-                if (addressInput) addressInput.value = '';
+                if (addressStreetInput) addressStreetInput.value = '';
+                if (addressNumberInput) addressNumberInput.value = '';
                 if (addressHidden) addressHidden.value = '';
                 if (latEl) latEl.value = '';
                 if (lngEl) lngEl.value = '';
-                const list = document.getElementById('address_list');
-                if (list) { list.classList.add('hidden'); list.innerHTML = ''; }
-                if (addressInput) addressInput.dataset.picked = '0';
+                const streetList = document.getElementById('address_street_list');
+                if (streetList) { streetList.classList.add('hidden'); streetList.innerHTML = ''; }
+                const validateList = document.getElementById('address_validate_list');
+                if (validateList) { validateList.classList.add('hidden'); validateList.innerHTML = ''; }
+                if (addressStreetInput) addressStreetInput.dataset.picked = '0';
+                if (addressNumberInput) addressNumberInput.dataset.picked = '0';
             };
 
             if (!provinciaSelect || !ciudadSelect || !provinceIdEl || !provinceNameEl || !cityIdEl || !cityNameEl) return;
@@ -507,6 +557,52 @@
                 locationPreview.textContent = label || (provinceNameEl.value ? `—, ${provinceNameEl.value}` : '—');
             };
 
+            const normalizeText = (value) => {
+                return (value || '')
+                    .toString()
+                    .trim()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+            };
+
+            const setStreetPreload = (on) => {
+                if (!streetPreloadEl) return;
+                streetPreloadEl.classList.toggle('hidden', !on);
+            };
+
+            const preloadStreets = async () => {
+                if (isLocked) return;
+                const cityName = (cityNameEl.value || '').trim();
+                const provinceName = (provinceNameEl.value || '').trim();
+
+                if (!cityName || !provinceName) {
+                    setStreetPreload(false);
+                    return;
+                }
+
+                setStreetPreload(true);
+                if (addressStreetInput) {
+                    addressStreetInput.disabled = true;
+                    addressStreetInput.classList.add('opacity-60', 'cursor-wait');
+                }
+
+                try {
+                    const url = new URL('/geo/street-preload', window.location.origin);
+                    url.searchParams.set('city_name', cityName);
+                    url.searchParams.set('province_name', provinceName);
+                    await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+                } catch (e) {
+                    // noop
+                } finally {
+                    setTimeout(() => setStreetPreload(false), 300);
+                    if (addressStreetInput) {
+                        addressStreetInput.disabled = false;
+                        addressStreetInput.classList.remove('opacity-60', 'cursor-wait');
+                    }
+                }
+            };
+
             const fillSelect = (select, items, placeholder) => {
                 select.innerHTML = `<option value="">${placeholder}</option>`;
                 for (const it of items) {
@@ -527,6 +623,7 @@
                     fillSelect(provinciaSelect, items, 'Seleccioná una provincia');
 
                     const prevProvinceId = (provinceIdEl.value || '').trim();
+                    const prevProvinceName = (provinceNameEl.value || '').trim();
                     if (prevProvinceId) {
                         provinciaSelect.value = prevProvinceId;
 
@@ -535,11 +632,27 @@
 
                         // ✅ restaurar ciudades sin pisar hidden en el init
                         await loadCitiesForProvince(prevProvinceId, true);
+                    } else if (prevProvinceName) {
+                        const match = Array.from(provinciaSelect.options).find((opt) =>
+                            normalizeText(opt.textContent) === normalizeText(prevProvinceName)
+                        );
+
+                        if (match) {
+                            provinciaSelect.value = match.value;
+                            provinceIdEl.value = match.value;
+                            provinceNameEl.value = match.textContent || prevProvinceName;
+                            await loadCitiesForProvince(match.value, true);
+                        } else {
+                            resetCityUI('Primero elegí una provincia');
+                        }
                     } else {
                         resetCityUI('Primero elegí una provincia');
                     }
 
                     syncPreview();
+                    if ((cityNameEl.value || '').trim() && (provinceNameEl.value || '').trim()) {
+                        preloadStreets();
+                    }
                 } catch (e) {
                     provinciaSelect.innerHTML = `<option value="">No se pudieron cargar provincias</option>`;
                     resetCityUI('No se pudieron cargar ciudades');
@@ -566,11 +679,12 @@
                     const data = await res.json();
                     const items = Array.isArray(data.items) ? data.items : [];
 
-                    ciudadSelect.disabled = false;
+                    ciudadSelect.disabled = isLocked ? true : false;
                     fillSelect(ciudadSelect, items, 'Seleccioná una ciudad');
 
                     if (tryRestoreFromHidden) {
                         const prevCityId = (cityIdEl.value || '').trim();
+                        const prevCityName = (cityNameEl.value || '').trim();
                         if (prevCityId) {
                             ciudadSelect.value = prevCityId;
                             const opt = ciudadSelect.selectedOptions?.[0];
@@ -580,6 +694,18 @@
                                 clearCityHidden();
                             } else if (opt) {
                                 cityNameEl.value = opt.textContent || cityNameEl.value || '';
+                            }
+                        } else if (prevCityName) {
+                            const match = Array.from(ciudadSelect.options).find((opt) =>
+                                normalizeText(opt.textContent) === normalizeText(prevCityName)
+                            );
+
+                            if (match) {
+                                ciudadSelect.value = match.value;
+                                cityIdEl.value = match.value;
+                                cityNameEl.value = match.textContent || prevCityName;
+                            } else {
+                                clearCityHidden();
                             }
                         }
                     }
@@ -591,33 +717,36 @@
                 }
             };
 
-            provinciaSelect.addEventListener('change', async () => {
-                const provinceId = provinciaSelect.value || '';
-                const provinceName = provinciaSelect.selectedOptions?.[0]?.textContent || '';
+            if (!isLocked) {
+                provinciaSelect.addEventListener('change', async () => {
+                    const provinceId = provinciaSelect.value || '';
+                    const provinceName = provinciaSelect.selectedOptions?.[0]?.textContent || '';
 
-                provinceIdEl.value = provinceId;
-                provinceNameEl.value = provinceName;
+                    provinceIdEl.value = provinceId;
+                    provinceNameEl.value = provinceName;
 
-                // ✅ ahora sí: al cambiar provincia (acción del usuario) limpiamos ciudad + dirección
-                clearCityHidden();
-                resetCityUI('Seleccioná una ciudad');
-                clearAddress();
+                    // ✅ ahora sí: al cambiar provincia (acción del usuario) limpiamos ciudad + dirección
+                    clearCityHidden();
+                    resetCityUI('Seleccioná una ciudad');
+                    clearAddress();
 
-                await loadCitiesForProvince(provinceId, false);
-                syncPreview();
-            });
+                    await loadCitiesForProvince(provinceId, false);
+                    syncPreview();
+                });
 
-            ciudadSelect.addEventListener('change', () => {
-                const cityId = ciudadSelect.value || '';
-                const cityName = ciudadSelect.selectedOptions?.[0]?.textContent || '';
+                ciudadSelect.addEventListener('change', () => {
+                    const cityId = ciudadSelect.value || '';
+                    const cityName = ciudadSelect.selectedOptions?.[0]?.textContent || '';
 
-                cityIdEl.value = cityId;
-                cityNameEl.value = cityName;
+                    cityIdEl.value = cityId;
+                    cityNameEl.value = cityName;
 
-                // ✅ al cambiar ciudad: dirección no es válida
-                clearAddress();
-                syncPreview();
-            });
+                    // ✅ al cambiar ciudad: dirección no es válida
+                    clearAddress();
+                    syncPreview();
+                    preloadStreets();
+                });
+            }
 
             // init
             // ✅ NO limpiamos hidden en init (ese era el bug que te borraba city/address)
@@ -627,15 +756,17 @@
         })();
     </script>
 
-    {{-- Autocomplete Dirección: SOLO valida cuando hay calle + altura (dígitos) --}}
+    {{-- Autocomplete Direccion: calle + altura --}}
     <script>
         (function () {
             const locked = @json($locked);
             if (locked) return;
 
-            const addressInput = document.getElementById('address_input');
+            const streetInput = document.getElementById('address_street');
+            const numberInput = document.getElementById('address_number');
             const addressHidden = document.getElementById('address');
-            const list = document.getElementById('address_list');
+            const streetList = document.getElementById('address_street_list');
+            const validateList = document.getElementById('address_validate_list');
 
             const cityNameEl = document.getElementById('city_name');
             const provinceNameEl = document.getElementById('province_name');
@@ -645,33 +776,67 @@
 
             const ciudadSelect = document.getElementById('ciudadSelect');
 
-            if (!addressInput || !addressHidden || !list || !cityNameEl || !provinceNameEl || !latEl || !lngEl) return;
+            if (!streetInput || !numberInput || !addressHidden || !streetList || !validateList || !cityNameEl || !provinceNameEl || !latEl || !lngEl) return;
 
-            let t = null;
-            const debounce = (fn, ms = 260) => { clearTimeout(t); t = setTimeout(fn, ms); };
+            let tStreet = null;
+            let tValidate = null;
+            const debounceStreet = (fn, ms = 260) => { clearTimeout(tStreet); tStreet = setTimeout(fn, ms); };
+            const debounceValidate = (fn, ms = 260) => { clearTimeout(tValidate); tValidate = setTimeout(fn, ms); };
 
-            const hideList = () => { list.classList.add('hidden'); list.innerHTML = ''; };
+            const hideList = (list) => { list.classList.add('hidden'); list.innerHTML = ''; };
 
-            const clearPick = () => {
-                addressHidden.value = '';
+            const clearValidation = () => {
                 latEl.value = '';
                 lngEl.value = '';
-                addressInput.dataset.picked = '0';
+                numberInput.dataset.picked = '0';
             };
 
-            const setPicked = () => { addressInput.dataset.picked = '1'; };
+            const syncAddressHidden = () => {
+                const street = (streetInput.value || '').trim();
+                const number = (numberInput.value || '').trim();
+                const composed = [street, number].filter(Boolean).join(' ').trim();
+                addressHidden.value = composed;
+            };
+
+            const setStreetPicked = (label) => {
+                streetInput.dataset.picked = '1';
+                streetInput.dataset.chosen = label;
+            };
+
+            const clearStreetPicked = () => {
+                streetInput.dataset.picked = '0';
+                streetInput.dataset.chosen = '';
+            };
+
+            const setNumberEnabled = () => {
+                const hasStreet = (streetInput.value || '').trim().length > 0;
+                numberInput.disabled = !hasStreet;
+                numberInput.classList.toggle('opacity-60', !hasStreet);
+                numberInput.classList.toggle('cursor-not-allowed', !hasStreet);
+                if (!hasStreet) {
+                    numberInput.value = '';
+                    clearValidation();
+                    hideList(validateList);
+                }
+                syncAddressHidden();
+            };
 
             const setEnabledByCity = () => {
                 const hasCity = (cityNameEl.value || '').trim().length > 0;
-                addressInput.disabled = !hasCity;
-                addressInput.classList.toggle('opacity-60', !hasCity);
-                addressInput.classList.toggle('cursor-not-allowed', !hasCity);
+                streetInput.disabled = !hasCity;
+                streetInput.classList.toggle('opacity-60', !hasCity);
+                streetInput.classList.toggle('cursor-not-allowed', !hasCity);
 
                 if (!hasCity) {
-                    addressInput.value = '';
-                    clearPick();
-                    hideList();
+                    streetInput.value = '';
+                    numberInput.value = '';
+                    clearStreetPicked();
+                    clearValidation();
+                    hideList(streetList);
+                    hideList(validateList);
                 }
+
+                setNumberEnabled();
             };
 
             const escapeHtml = (s) =>
@@ -681,10 +846,24 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;');
 
-            const render = (items) => {
-                if (!items || !items.length) return hideList();
+            const renderStreet = (items) => {
+                if (!items || !items.length) return hideList(streetList);
 
-                list.innerHTML = items.map(it => `
+                streetList.innerHTML = items.map(it => `
+                        <button type="button"
+                                class="addr-item street-item"
+                                data-label="${escapeHtml(it.label)}">
+                            ${escapeHtml(it.label)}
+                        </button>
+                    `).join('');
+
+                streetList.classList.remove('hidden');
+            };
+
+            const renderValidate = (items) => {
+                if (!items || !items.length) return hideList(validateList);
+
+                validateList.innerHTML = items.map(it => `
                         <button type="button"
                                 class="addr-item address-item"
                                 data-label="${escapeHtml(it.label)}"
@@ -694,54 +873,130 @@
                         </button>
                     `).join('');
 
-                list.classList.remove('hidden');
+                validateList.classList.remove('hidden');
             };
 
-            const shouldValidateNow = (q) => {
-                return q.length >= 4 && /\d/.test(q);
-            };
-
-            const fetchSuggest = async () => {
-                const q = (addressInput.value || '').trim();
+            const fetchStreetSuggest = async () => {
+                const q = (streetInput.value || '').trim();
                 const cityName = (cityNameEl.value || '').trim();
                 const provinceName = (provinceNameEl.value || '').trim();
 
-                if ((addressHidden.value || '').trim() !== q) {
-                    clearPick();
-                }
-
-                if (!cityName || !provinceName) {
-                    hideList();
-                    return;
-                }
-
-                if (!shouldValidateNow(q)) {
-                    hideList();
+                if (q.length < 2 || !cityName || !provinceName) {
+                    hideList(streetList);
                     return;
                 }
 
                 try {
+                    const url = new URL('/geo/street-suggest', window.location.origin);
+                    url.searchParams.set('q', q);
+                    url.searchParams.set('city_name', cityName);
+                    url.searchParams.set('province_name', provinceName);
+
+                    const r = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok) return hideList(streetList);
+
+                    const j = await r.json();
+                    renderStreet(Array.isArray(j.items) ? j.items : []);
+                } catch {
+                    hideList(streetList);
+                }
+            };
+
+            const shouldValidateNow = (street, number) => {
+                return street.length >= 3 && number.length >= 1 && /\d/.test(number);
+            };
+
+            const fetchValidateSuggest = async () => {
+                const street = (streetInput.value || '').trim();
+                const number = (numberInput.value || '').trim();
+                const cityName = (cityNameEl.value || '').trim();
+                const provinceName = (provinceNameEl.value || '').trim();
+
+                if (!street || !number || !cityName || !provinceName) {
+                    hideList(validateList);
+                    return;
+                }
+
+                if (!shouldValidateNow(street, number)) {
+                    hideList(validateList);
+                    return;
+                }
+
+                try {
+                    const q = `${street} ${number}`.trim();
+                    if ((addressHidden.value || '').trim() !== q) {
+                        clearValidation();
+                    }
+
                     const url = new URL('/geo/address-suggest', window.location.origin);
                     url.searchParams.set('q', q);
                     url.searchParams.set('city_name', cityName);
                     url.searchParams.set('province_name', provinceName);
 
                     const r = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
-                    if (!r.ok) return hideList();
+                    if (!r.ok) return hideList(validateList);
 
                     const j = await r.json();
-                    render(Array.isArray(j.items) ? j.items : []);
+                    renderValidate(Array.isArray(j.items) ? j.items : []);
                 } catch {
-                    hideList();
+                    hideList(validateList);
                 }
             };
 
-            addressInput.addEventListener('input', () => {
-                if (addressInput.disabled) return;
-                debounce(fetchSuggest, 280);
+            streetInput.addEventListener('input', () => {
+                if (streetInput.disabled) return;
+                const chosen = (streetInput.dataset.chosen || '').trim();
+                if (streetInput.dataset.picked === '1' && streetInput.value.trim() !== chosen) {
+                    clearStreetPicked();
+                }
+                clearValidation();
+                setNumberEnabled();
+                debounceStreet(fetchStreetSuggest, 280);
             });
 
-            list.addEventListener('click', (e) => {
+            streetList.addEventListener('click', (e) => {
+                const btn = e.target.closest('.street-item');
+                if (!btn) return;
+
+                const label = (btn.dataset.label || '').trim();
+                streetInput.value = label;
+                setStreetPicked(label);
+                hideList(streetList);
+                clearValidation();
+                setNumberEnabled();
+                numberInput.focus();
+            });
+
+            streetInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    const typed = (streetInput.value || '').trim();
+                    const chosen = (streetInput.dataset.chosen || '').trim();
+
+                    if (!typed) {
+                        clearStreetPicked();
+                        clearValidation();
+                        hideList(streetList);
+                        setNumberEnabled();
+                        return;
+                    }
+
+                    if (streetInput.dataset.picked === '1' && typed !== chosen) {
+                        clearStreetPicked();
+                    }
+
+                    hideList(streetList);
+                }, 160);
+            });
+
+            numberInput.addEventListener('input', () => {
+                if (numberInput.disabled) return;
+                numberInput.dataset.picked = '0';
+                clearValidation();
+                syncAddressHidden();
+                debounceValidate(fetchValidateSuggest, 280);
+            });
+
+            validateList.addEventListener('click', (e) => {
                 const btn = e.target.closest('.address-item');
                 if (!btn) return;
 
@@ -749,53 +1004,61 @@
                 const lat = btn.dataset.lat;
                 const lng = btn.dataset.lng;
 
-                addressInput.value = label;
                 addressHidden.value = label;
                 if (lat) latEl.value = Number(lat).toFixed(7);
                 if (lng) lngEl.value = Number(lng).toFixed(7);
+                numberInput.dataset.picked = '1';
 
-                setPicked();
-                hideList();
+                const match = label.match(/^(.*?)[,]?\s+(\d[\d\w\-\/]*)$/);
+                if (match) {
+                    streetInput.value = match[1].trim();
+                    numberInput.value = match[2].trim();
+                    setStreetPicked(match[1].trim());
+                }
+
+                hideList(validateList);
             });
 
-            addressInput.addEventListener('blur', () => {
+            numberInput.addEventListener('blur', () => {
                 setTimeout(() => {
-                    const typed = (addressInput.value || '').trim();
-                    const chosen = (addressHidden.value || '').trim();
-                    const picked = addressInput.dataset.picked === '1';
+                    const typed = (numberInput.value || '').trim();
 
                     if (!typed) {
-                        clearPick();
-                        hideList();
+                        clearValidation();
+                        hideList(validateList);
+                        syncAddressHidden();
                         return;
                     }
 
-                    if (!picked || typed !== chosen) {
-                        addressInput.value = '';
-                        clearPick();
-                    }
-
-                    hideList();
+                    hideList(validateList);
                 }, 160);
             });
 
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('#address_list') && e.target !== addressInput) {
-                    hideList();
+                if (!e.target.closest('#address_street_list') && e.target !== streetInput) {
+                    hideList(streetList);
+                }
+                if (!e.target.closest('#address_validate_list') && e.target !== numberInput) {
+                    hideList(validateList);
                 }
             });
 
             if (ciudadSelect) ciudadSelect.addEventListener('change', () => setEnabledByCity());
 
             // init
-            setEnabledByCity();
-
-            // si venía pre-cargado, lo marcamos como elegido (si hay hidden)
-            if ((addressHidden.value || '').trim() && (addressInput.value || '').trim()) {
-                addressInput.dataset.picked = '1';
+            if ((streetInput.value || '').trim()) {
+                setStreetPicked((streetInput.value || '').trim());
             } else {
-                addressInput.dataset.picked = '0';
+                clearStreetPicked();
             }
+
+            if ((addressHidden.value || '').trim() && (numberInput.value || '').trim()) {
+                numberInput.dataset.picked = '1';
+            } else {
+                numberInput.dataset.picked = '0';
+            }
+
+            setEnabledByCity();
         })();
     </script>
 
