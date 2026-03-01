@@ -162,54 +162,42 @@ class SearchController extends Controller
             ]);
         }
 
-        if ($cityId !== '') {
-            $results = $applySort($base
-                ->where(function ($w) use ($cityId, $provinceId, $remote) {
+        $applyLocation = function ($query) use ($cityId, $provinceId, $remote) {
+            if ($cityId !== '') {
+                return $query->where(function ($w) use ($cityId, $provinceId, $remote) {
                     $w->where(function ($z) use ($cityId, $provinceId) {
                         $z->where('city_id', $cityId)
-                          ->when($provinceId !== '', fn($qq) => $qq->where('province_id', $provinceId))
+                          ->when($provinceId !== '', fn ($qq) => $qq->where('province_id', $provinceId))
                           ->where('mode_presential', true);
                     });
 
                     if ($remote) {
                         $w->orWhere('mode_remote', true);
                     }
-                })
-            )->paginate($perPage);
+                });
+            }
 
-            return view('search.results', [
-                'results' => $results,
-                'q'       => $q,
-                'word'    => $word,
-                'sort'    => $sort,
-                'loc'     => $locText,
-                'lat'     => $lat,
-                'lng'     => $lng,
-                'r'       => $radius,
-                'remote'  => $remote,
-                'featured' => false,
-                'all'     => false,
+            if ($provinceId !== '') {
+                return $query->where(function ($w) use ($provinceId, $remote) {
+                    $w->where(function ($z) use ($provinceId) {
+                        $z->where('province_id', $provinceId)
+                          ->where('mode_presential', true);
+                    });
 
-                // nuevos (por si la vista los quiere usar)
-                'province_id'   => $provinceId,
-                'province_name' => $provinceName,
-                'city_id'       => $cityId,
-                'city_name'     => $cityName,
-            ]);
-        }
+                    if ($remote) {
+                        $w->orWhere('mode_remote', true);
+                    }
+                });
+            }
 
-        /**
-         * Fallback (por si alguien entra a /search sin city_id):
-         * - Si remote=1: mostrar remotos
-         * - Si remote=0: mostrar presenciales (sin filtrar por ciudad)
-         */
-        $results = $applySort($base
-            ->when(
-                $remote,
-                fn ($qq) => $qq->where('mode_remote', true),
-                fn ($qq) => $qq->where('mode_presential', true)
-            )
-        )->paginate($perPage);
+            if ($remote) {
+                return $query;
+            }
+
+            return $query->where('mode_presential', true);
+        };
+
+        $results = $applySort($applyLocation($base))->paginate($perPage);
 
         return view('search.results', [
             'results' => $results,

@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Notifications;
+
+use Illuminate\Auth\Notifications\ResetPassword as BaseResetPassword;
+use Illuminate\Notifications\Messages\MailMessage;
+
+class ResetPasswordNotification extends BaseResetPassword
+{
+    /**
+     * Build the mail representation of the notification.
+     *
+     * @param  mixed  $notifiable
+     * @return \Illuminate\Notifications\Messages\MailMessage
+     */
+    public function toMail($notifiable)
+    {
+        $url = $this->resetUrl($notifiable);
+
+        return (new MailMessage)
+            ->subject('Restablecer contraseña')
+            ->view('emails.auth.reset-password', [
+                'url' => $url,
+                'appName' => config('app.name', 'Alma Conecta'),
+                'expire' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ])
+            ->text('emails.auth.reset-password-text', [
+                'url' => $url,
+                'appName' => config('app.name', 'Alma Conecta'),
+                'expire' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ]);
+    }
+}

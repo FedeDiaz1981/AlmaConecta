@@ -75,7 +75,7 @@
                     @if($user->role === 'provider')
                         <a href="{{ route('dashboard.profile.edit') }}"
                            class="hidden lg:inline hover:text-gold whitespace-nowrap">
-                            Publicá tu espacio
+                            Mi espacio
                         </a>
                     @endif
 
@@ -263,6 +263,57 @@
             </div>
         </div>
     @endauth
+
+    {{-- MODAL GLOBAL DE ERRORES --}}
+    @php
+        $ignoredBags = ['passwordReset', 'userDeletion', 'updatePassword'];
+        $bagErrors = collect($errors->getBags())
+            ->reject(fn ($bag, $name) => in_array($name, $ignoredBags, true))
+            ->flatMap(fn ($bag) => $bag->all());
+        $sessionError = session('error') ?? session('error_message');
+        $allErrors = $bagErrors->merge($sessionError ? [$sessionError] : []);
+    @endphp
+
+    @if($allErrors->isNotEmpty())
+        <x-modal name="global-error" :show="true" maxWidth="md" focusable>
+            <div class="bg-blueNight border border-blueMid rounded-2xl shadow-soft p-5 sm:p-6 text-silver">
+                <div class="flex items-start justify-between gap-3">
+                    <h3 class="text-base font-semibold">Ups, hay un problema</h3>
+                    <button type="button"
+                            class="text-silver/60 hover:text-silver text-sm"
+                            x-on:click="$dispatch('close-modal', 'global-error')">
+                        ✕
+                    </button>
+                </div>
+
+                <p class="mt-2 text-sm text-silver/80">
+                    Revisá la información y volvé a intentar.
+                </p>
+
+                <div class="mt-3 space-y-2 text-sm text-silver/90">
+                    @foreach($allErrors as $err)
+                        <div class="flex items-start gap-2">
+                            <span class="text-gold">•</span>
+                            <span>{{ $err }}</span>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="mt-4 text-xs text-silver/70">
+                    ¿Qué podés hacer? Corregí los campos marcados y reintentá. Si el problema continúa,
+                    contactanos.
+                </div>
+
+                <div class="mt-5 flex justify-end">
+                    <button type="button"
+                            class="px-4 py-2 rounded-md bg-gold text-blueDeep text-xs font-semibold hover:bg-goldStrong"
+                            x-on:click="$dispatch('close-modal', 'global-error')">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </x-modal>
+    @endif
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {

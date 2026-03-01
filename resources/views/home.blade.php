@@ -100,7 +100,7 @@
                         {{-- Provincia --}}
                         <div class="flex flex-col relative">
                             <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                                Provincia <span class="text-red-400">*</span>
+                                Provincia <span class="text-silver/50 text-[12px] normal-case">(opcional)</span>
                             </label>
 
                             <div class="relative">
@@ -120,7 +120,7 @@
                         {{-- Ciudad --}}
                         <div class="flex flex-col relative">
                             <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                                Ciudad <span class="text-red-400">*</span>
+                                Ciudad <span class="text-silver/50 text-[12px] normal-case">(opcional)</span>
                             </label>
 
                             <div class="relative">
@@ -477,15 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!qInput || qInput.value.trim() === '') {
             return { msg: 'Completá “¿Qué estás buscando?”.', field: qInput };
         }
-        if (qInput?.dataset?.picked !== '1') {
-            return { msg: 'Seleccioná una especialidad de la lista.', field: qInput };
-        }
-        if (!provinceIdEl?.value) {
-            return { msg: 'Elegí una provincia.', field: provinciaSelect };
-        }
-        if (!cityIdEl?.value) {
-            return { msg: 'Elegí una ciudad.', field: ciudadSelect };
-        }
         return null;
     };
 
@@ -715,13 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         qInput.addEventListener('blur', () => {
             setTimeout(() => {
                 if (suppressBlurClear) return;
-                if (qInput.readOnly) return;
-                if (qInput.dataset.picked !== '1') {
-                    qInput.value = '';
-                    hideSuggest();
-                    syncQClear();
-                    updateSearchButtonState();
-                }
+                hideSuggest();
             }, 120);
         });
 
@@ -804,14 +789,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const items = Array.isArray(data.items) ? data.items : [];
 
             renderList(provinciaList, items);
-            setButtonLabel(provinciaSelect, '', 'Seleccioná una provincia');
+            setButtonLabel(provinciaSelect, '', 'Seleccioná una provincia (opcional)');
 
             // si venía request('province_id') desde la URL, lo re-seleccionamos
             const prevProvinceId = provinceIdEl?.value || '';
             if (prevProvinceId) {
                 const prevProvinceName = provinceNameEl?.value || (items.find(it => it.id === prevProvinceId)?.nombre || '');
                 if (prevProvinceName) {
-                    setButtonLabel(provinciaSelect, prevProvinceName, 'Seleccioná una provincia');
+            setButtonLabel(provinciaSelect, prevProvinceName, 'Seleccioná una provincia (opcional)');
                     if (provinceNameEl) provinceNameEl.value = prevProvinceName;
                 }
                 // disparar carga de ciudades
@@ -848,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ciudadSelect.disabled = false;
             ciudadSelect.classList.remove('opacity-60', 'cursor-not-allowed');
             renderList(ciudadList, items);
-            setButtonLabel(ciudadSelect, '', 'Seleccioná una ciudad');
+            setButtonLabel(ciudadSelect, '', 'Seleccioná una ciudad (opcional)');
 
             // restaurar city_id si vino por querystring
             if (tryRestoreFromQuery) {
@@ -856,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (prevCityId) {
                     const prevCityName = cityNameEl?.value || (items.find(it => it.id === prevCityId)?.nombre || '');
                     if (prevCityName) {
-                        setButtonLabel(ciudadSelect, prevCityName, 'Seleccioná una ciudad');
+                        setButtonLabel(ciudadSelect, prevCityName, 'Seleccioná una ciudad (opcional)');
                         if (cityNameEl) cityNameEl.value = prevCityName;
                     } else {
                         resetCity();
@@ -891,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (provinceIdEl) provinceIdEl.value = provinceId;
             if (provinceNameEl) provinceNameEl.value = provinceName;
-            setButtonLabel(provinciaSelect, provinceName, 'Seleccioná una provincia');
+            setButtonLabel(provinciaSelect, provinceName, 'Seleccioná una provincia (opcional)');
             closeList(provinciaList);
 
             resetCity('Cargando ciudades…');
@@ -922,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (cityIdEl) cityIdEl.value = cityId;
             if (cityNameEl) cityNameEl.value = cityName;
-            setButtonLabel(ciudadSelect, cityName, 'Seleccioná una ciudad');
+            setButtonLabel(ciudadSelect, cityName, 'Seleccioná una ciudad (opcional)');
             closeList(ciudadList);
 
             updateSearchButtonState();
