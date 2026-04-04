@@ -5,20 +5,55 @@
 @section('content')
 
 @php
-    $heroMobile = asset('hero_lma_conecta_Mobile.png');
+    $heroMobile = asset('hero_lma_conecta_mobile_b2.png');
     $heroDesktop = asset('hero_lma_conecta.png');
 @endphp
 
 <style>
-    .hero-bg {
-        background-size: cover;
-        background-position: top;
-        background-image: url('{{ $heroMobile }}'); /* MOBILE */
+    .hero-scene {
+        min-height: 100svh;
+    }
+
+    .hero-fade {
+        background: linear-gradient(180deg, rgba(2, 6, 23, 0.16) 0%, rgba(2, 6, 23, 0.28) 34%, rgba(2, 6, 23, 0.54) 100%);
+    }
+
+    .hero-shell {
+        padding-top: 5.5rem;
+        padding-bottom: 2.5rem;
+    }
+
+    .hero-copy {
+        max-width: 34rem;
+    }
+
+    .hero-title {
+        text-shadow: 0 3px 18px rgba(2, 6, 23, 0.55);
+    }
+
+    .hero-lede {
+        text-shadow: 0 2px 14px rgba(2, 6, 23, 0.5);
+    }
+
+    .hero-media {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+        object-position: center center;
     }
 
     @media (min-width: 768px) {
-        .hero-bg {
-            background-image: url('{{ $heroDesktop }}'); /* DESKTOP */
+        .hero-scene {
+            min-height: 95vh;
+        }
+
+        .hero-shell {
+            padding-top: 2.5rem;
+            padding-bottom: 3rem;
+        }
+
+        .hero-media {
+            object-position: center top;
         }
     }
 </style>
@@ -27,9 +62,19 @@
 {{-- HERO / PORTADA (con imagen IA de fondo) --}}
 {{-- ============================= --}}
 <section
-    class="relative w-full min-h-[80vh] md:min-h-[95vh] text-silver bg-cover bg-top overflow-hidden hero-bg">
+    class="hero-scene relative w-full text-silver overflow-hidden">
+    <picture class="absolute inset-0">
+        <source media="(min-width: 768px)" srcset="{{ $heroDesktop }}">
+        <source media="(max-width: 767px)" srcset="{{ $heroMobile }}">
+        <img
+            src="{{ $heroMobile }}"
+            alt=""
+            aria-hidden="true"
+            class="hero-media select-none pointer-events-none">
+    </picture>
+
     {{-- Capa oscura para que se lea el texto --}}
-    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 hero-fade"></div>
 
     {{-- Luz dorada encima (tu gradiente) --}}
     <div class="absolute inset-0 opacity-50"
@@ -37,14 +82,14 @@
     </div>
 
     {{-- CONTENIDO --}}
-    <div class="relative max-w-8xl mx-auto md:ml-[3%] px-0 w-full pt-20 md:pt-10 pb-12">
-        <div class="w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
+    <div class="hero-shell relative max-w-8xl mx-auto md:ml-[3%] px-4 sm:px-6 w-full">
+        <div class="hero-copy w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
 
-            <h1 class="text-3xl md:text-[2.4rem] font-bold leading-tight mb-4">
+            <h1 class="hero-title text-3xl md:text-[2.4rem] font-bold leading-tight mb-4">
                 Encontrá tu espacio de <span class="text-gold">bienestar holístico</span>
             </h1>
 
-            <p class="text-silver/80 text-base md:text-lg mb-10">
+            <p class="hero-lede text-silver/80 text-base md:text-lg mb-10">
                 Conectá con terapeutas, facilitadores y espacios de bienestar en un solo lugar.
             </p>
 
