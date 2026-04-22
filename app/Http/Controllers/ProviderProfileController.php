@@ -24,13 +24,13 @@ class ProviderProfileController extends Controller
             ]
         );
 
-        // edición pendiente (para bloquear el form)
+        // Edicion pendiente (para bloquear el form).
         $pendingEdit = Edit::where('profile_id', $profile->id)
             ->where('status', 'pending')
             ->latest()
             ->first();
 
-        // Si hay edicion pendiente, mostramos esos valores en el form
+        // Si hay edicion pendiente, mostramos esos valores en el form.
         if ($pendingEdit) {
             $payload = is_array($pendingEdit->payload)
                 ? $pendingEdit->payload
@@ -58,10 +58,10 @@ class ProviderProfileController extends Controller
             }
         }
 
-        // Servicios
+        // Servicios.
         $services = Service::orderBy('name')->get();
 
-        // Especialidades (disciplinas) activas
+        // Especialidades (disciplinas) activas.
         $specialties = Specialty::where('active', true)
             ->orderBy('name')
             ->get();
@@ -82,7 +82,7 @@ class ProviderProfileController extends Controller
     /**
      * Cliente HTTP:
      * - En local: sin verificar SSL (para evitar cURL error 60 en Windows)
-     * - En otros entornos: verificación normal
+     * - En otros entornos: verificacion normal
      */
     protected function httpClient()
     {
@@ -92,32 +92,29 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Normaliza texto para comparar (minúsculas, sin tildes, espacios).
+     * Normaliza texto para comparar (minusculas, sin tildes, espacios).
      */
     protected function normalizePlace(string $s): string
     {
         $s = mb_strtolower(trim($s));
         $s = preg_replace('/\s+/', ' ', $s);
+        $s = Str::ascii($s);
 
-        // Normalización simple de acentos
-        $map = ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n'];
-        $s = strtr($s, $map);
-
-        // Limpieza leve de signos comunes
+        // Limpieza leve de signos comunes.
         $s = str_replace(['.', ',', ';'], '', $s);
 
         return trim($s);
     }
 
     /**
-     * Alias/casos especiales para comparación de provincias/ciudades.
+     * Alias/casos especiales para comparacion de provincias/ciudades.
      * (ej: CABA)
      */
     protected function normalizeWithAliases(string $s): string
     {
         $n = $this->normalizePlace($s);
 
-        // Alias CABA
+        // Alias CABA.
         if ($n === 'caba' || $n === 'capital federal' || $n === 'ciudad autonoma de buenos aires') {
             return 'ciudad autonoma de buenos aires';
         }
@@ -126,13 +123,15 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Geocodifica una dirección con Nominatim y devuelve [lat, lng].
+     * Geocodifica una direccion con Nominatim y devuelve [lat, lng].
      * Cachea para no pegarle siempre al servicio.
      */
     protected function geocodeAddress(string $query): ?array
     {
         $q = trim($query);
-        if ($q === '') return null;
+        if ($q === '') {
+            return null;
+        }
 
         $cacheKey = 'geo:addr:' . md5($q);
 
@@ -140,7 +139,7 @@ class ProviderProfileController extends Controller
             $client = $this->httpClient();
 
             $resp = $client->withHeaders([
-                    'User-Agent' => 'alma-conecta/1.0 (+https://example.com)',
+                    'User-Agent' => 'AlmaConecta/1.0 (contacto@almaconecta.com.ar)',
                 ])
                 ->timeout(12)
                 ->get('https://nominatim.openstreetmap.org/search', [
@@ -174,6 +173,7 @@ class ProviderProfileController extends Controller
             ];
         });
     }
+
     /**
      * Obtiene coordenadas del centro de una ciudad (fallback).
      */
@@ -182,7 +182,9 @@ class ProviderProfileController extends Controller
         $cityName = trim($cityName);
         $provinceName = trim($provinceName);
 
-        if ($cityName === "" || $provinceName === "") return null;
+        if ($cityName === '' || $provinceName === '') {
+            return null;
+        }
 
         $cacheKey = 'geo:city-center:' . md5($cityName . '|' . $provinceName);
 
@@ -192,7 +194,6 @@ class ProviderProfileController extends Controller
         });
     }
 
-
     /**
      * Reverse geocoding (Nominatim) para obtener addressdetails.
      */
@@ -201,7 +202,7 @@ class ProviderProfileController extends Controller
         $client = $this->httpClient();
 
         $resp = $client->withHeaders([
-                'User-Agent' => 'alma-conecta/1.0 (+https://example.com)',
+                'User-Agent' => 'AlmaConecta/1.0 (contacto@almaconecta.com.ar)',
             ])
             ->timeout(12)
             ->get('https://nominatim.openstreetmap.org/reverse', [
@@ -213,10 +214,14 @@ class ProviderProfileController extends Controller
                 'zoom' => 18,
             ]);
 
-        if (!$resp->ok()) return null;
+        if (!$resp->ok()) {
+            return null;
+        }
 
         $j = $resp->json();
-        if (!is_array($j)) return null;
+        if (!is_array($j)) {
+            return null;
+        }
 
         return is_array($j['address'] ?? null) ? $j['address'] : null;
     }
@@ -227,10 +232,12 @@ class ProviderProfileController extends Controller
     protected function coordsBelongToSelectedCity(array $selected, float $lat, float $lng): bool
     {
         $addr = $this->reverseDetails($lat, $lng);
-        if (!$addr) return false;
+        if (!$addr) {
+            return false;
+        }
 
-        $revState = (string)($addr['state'] ?? '');
-        $revCity  = (string)(
+        $revState = (string) ($addr['state'] ?? '');
+        $revCity = (string) (
             $addr['city'] ??
             ($addr['town'] ??
             ($addr['village'] ??
@@ -238,23 +245,25 @@ class ProviderProfileController extends Controller
             ($addr['municipality'] ?? ''))))
         );
 
-        $chosenState = (string)($selected['province_name'] ?? '');
-        $chosenCity  = (string)($selected['city_name'] ?? '');
+        $chosenState = (string) ($selected['province_name'] ?? '');
+        $chosenCity = (string) ($selected['city_name'] ?? '');
 
-        if (trim($chosenState) === '' || trim($chosenCity) === '') return false;
+        if (trim($chosenState) === '' || trim($chosenCity) === '') {
+            return false;
+        }
 
         $aState = $this->normalizeWithAliases($revState);
-        $aCity  = $this->normalizeWithAliases($revCity);
+        $aCity = $this->normalizeWithAliases($revCity);
         $bState = $this->normalizeWithAliases($chosenState);
-        $bCity  = $this->normalizeWithAliases($chosenCity);
+        $bCity = $this->normalizeWithAliases($chosenCity);
 
-        if ($aState === $bState && $aCity === $bCity) return true;
+        if ($aState === $bState && $aCity === $bCity) {
+            return true;
+        }
 
-        if ($aState === $bState) {
-            if ($aCity !== '' && $bCity !== '') {
-                if (str_contains($aCity, $bCity) || str_contains($bCity, $aCity)) {
-                    return true;
-                }
+        if ($aState === $bState && $aCity !== '' && $bCity !== '') {
+            if (str_contains($aCity, $bCity) || str_contains($bCity, $aCity)) {
+                return true;
             }
         }
 
@@ -262,22 +271,21 @@ class ProviderProfileController extends Controller
     }
 
     /**
-     * Dirección: debe tener altura (al menos 1 dígito)
+     * Direccion: debe tener altura (al menos 1 digito).
      */
-
     public function saveDraft(Request $request)
     {
         $user = Auth::user();
         $profile = Profile::where('user_id', $user->id)->firstOrFail();
 
-        // si ya hay un pending, no permitimos enviar otro
+        // Si ya hay un pending, no permitimos enviar otro.
         $alreadyPending = Edit::where('profile_id', $profile->id)
             ->where('status', 'pending')
             ->exists();
 
         if ($alreadyPending) {
             return back()
-                ->withErrors(['general' => 'Ya tenés una petición en revisión. Anulála para poder volver a editar.'])
+                ->withErrors(['general' => 'Ya tenes una peticion en revision. Anulala para poder volver a editar.'])
                 ->withInput();
         }
 
@@ -295,40 +303,40 @@ class ProviderProfileController extends Controller
             'video_url'      => 'nullable|url|max:1024',
             'photo'          => 'nullable|image|max:2048',
 
-            // GeoRef (ids + nombres)
+            // GeoRef (ids + nombres).
             'province_id'    => 'nullable|string|max:50',
             'province_name'  => 'nullable|string|max:120',
             'city_id'        => 'nullable|string|max:80',
             'city_name'      => 'nullable|string|max:120',
 
-            // Dirección textual (sin ciudad/provincia)
+            // Direccion textual (sin ciudad/provincia).
             'address_street' => 'nullable|string|max:180',
             'address_number' => 'nullable|string|max:50',
             'address'        => 'nullable|string|max:255',
             'address_extra'  => 'nullable|string|max:120',
 
-            // coords (desde autocomplete)
+            // Coords (desde autocomplete).
             'lat'            => 'nullable|numeric',
             'lng'            => 'nullable|numeric',
 
-            // contacto
+            // Contacto.
             'whatsapp'       => 'nullable|string|max:30',
             'contact_email'  => 'nullable|email|max:255',
             'template_key'   => 'required|in:a,b',
 
-            // especialidades
+            // Especialidades.
             'specialties'    => 'required|array|min:1',
             'specialties.*'  => 'integer|exists:specialties,id',
         ], [
-            'display_name.required' => 'El nombre público es obligatorio.',
+            'display_name.required' => 'El nombre publico es obligatorio.',
             'modality.required'     => 'La modalidad es obligatoria.',
             'template_key.required' => 'El template es obligatorio.',
-            'specialties.required'  => 'Tenés que seleccionar al menos una especialidad.',
+            'specialties.required'  => 'Tenes que seleccionar al menos una especialidad.',
         ]);
 
-        $addressStreet = trim((string)($data['address_street'] ?? ''));
-        $addressNumber = trim((string)($data['address_number'] ?? ''));
-        $addressText = trim((string)($data['address'] ?? ''));
+        $addressStreet = trim((string) ($data['address_street'] ?? ''));
+        $addressNumber = trim((string) ($data['address_number'] ?? ''));
+        $addressText = trim((string) ($data['address'] ?? ''));
 
         if ($addressStreet !== '' || $addressNumber !== '') {
             $addressText = trim(implode(' ', array_filter([$addressStreet, $addressNumber])));
@@ -343,32 +351,36 @@ class ProviderProfileController extends Controller
         $data['address_street'] = $addressStreet !== '' ? $addressStreet : null;
         $data['address_number'] = $addressNumber !== '' ? $addressNumber : null;
 
-        // modalidad -> flags
-        $mode_remote     = $data['modality'] === 'remoto' || $data['modality'] === 'ambas';
+        // Modalidad -> flags.
+        $mode_remote = $data['modality'] === 'remoto' || $data['modality'] === 'ambas';
         $mode_presential = $data['modality'] === 'presencial' || $data['modality'] === 'ambas';
 
         if ($mode_presential) {
             $missing = [];
-            if (empty($data['province_id']) || empty($data['province_name'])) $missing[] = 'Provincia';
-            if (empty($data['city_id']) || empty($data['city_name'])) $missing[] = 'Ciudad';
-            if (empty($data['address'])) $missing[] = 'Dirección';
+            if (empty($data['province_id']) || empty($data['province_name'])) {
+                $missing[] = 'Provincia';
+            }
+            if (empty($data['city_id']) || empty($data['city_name'])) {
+                $missing[] = 'Ciudad';
+            }
+            if (empty($data['address'])) {
+                $missing[] = 'Direccion';
+            }
 
             if (!empty($missing)) {
                 return back()
                     ->withErrors(['general' => 'Faltan datos para modalidad presencial: ' . implode(', ', $missing) . '.'])
                     ->withInput();
             }
-
-
         }
 
-        // foto
+        // Foto.
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('profiles', 'public');
         }
 
-        // Geocoding + VALIDACION ciudad/provincia
+        // Geocoding + validacion ciudad/provincia.
         $lat = null;
         $lng = null;
 
@@ -388,9 +400,9 @@ class ProviderProfileController extends Controller
                 }
             }
 
-            $geoQuery = trim((string)($data['address'] ?? '')) . ', ' .
-                        trim((string)($data['city_name'] ?? '')) . ', ' .
-                        trim((string)($data['province_name'] ?? '')) . ', Argentina';
+            $geoQuery = trim((string) ($data['address'] ?? '')) . ', ' .
+                        trim((string) ($data['city_name'] ?? '')) . ', ' .
+                        trim((string) ($data['province_name'] ?? '')) . ', Argentina';
 
             if (!$lat || !$lng) {
                 $geo = $this->geocodeAddress($geoQuery);
@@ -413,8 +425,8 @@ class ProviderProfileController extends Controller
 
             if (!$lat || !$lng) {
                 $center = $this->cityCenterCoords(
-                    (string)($data['city_name'] ?? ''),
-                    (string)($data['province_name'] ?? '')
+                    (string) ($data['city_name'] ?? ''),
+                    (string) ($data['province_name'] ?? '')
                 );
 
                 if ($center) {
@@ -429,12 +441,13 @@ class ProviderProfileController extends Controller
                     ->withInput();
             }
         }
-        // Compatibilidad con el resto del sitio actual
-        $derivedState   = $data['province_name'] ?? null;
-        $derivedCity    = $data['city_name'] ?? null;
+
+        // Compatibilidad con el resto del sitio actual.
+        $derivedState = $data['province_name'] ?? null;
+        $derivedCity = $data['city_name'] ?? null;
         $derivedCountry = 'AR';
 
-        // payload para aprobar
+        // Payload para aprobar.
         $payload = [
             'display_name'    => $data['display_name'],
             'service_id'      => $data['service_id'] ?? null,
@@ -444,24 +457,24 @@ class ProviderProfileController extends Controller
             'mode_remote'     => $mode_remote,
             'mode_presential' => $mode_presential,
 
-            // ids + nombres
+            // Ids + nombres.
             'province_id'     => $data['province_id'] ?? null,
             'province_name'   => $data['province_name'] ?? null,
             'city_id'         => $data['city_id'] ?? null,
             'city_name'       => $data['city_name'] ?? null,
 
-            // Dirección + extra
+            // Direccion + extra.
             'address'         => $data['address'] ?? null,
             'address_street'  => $data['address_street'] ?? null,
             'address_number'  => $data['address_number'] ?? null,
             'address_extra'   => $data['address_extra'] ?? null,
 
-            // compatibilidad / display actual
+            // Compatibilidad / display actual.
             'country'         => $derivedCountry,
             'state'           => $derivedState,
             'city'            => $derivedCity,
 
-            // coords calculadas/validadas
+            // Coords calculadas/validadas.
             'lat'             => $lat,
             'lng'             => $lng,
 
@@ -475,7 +488,7 @@ class ProviderProfileController extends Controller
             $payload['photo_path'] = $photoPath;
         }
 
-        // Persistimos ubicacion en el perfil para que quede guardada inmediatamente
+        // Persistimos ubicacion en el perfil para que quede guardada inmediatamente.
         $locationKeys = [
             'province_id',
             'province_name',
@@ -515,7 +528,7 @@ class ProviderProfileController extends Controller
             'status'     => 'pending',
         ]);
 
-        return back()->with('status', 'Borrador enviado a revisión.');
+        return back()->with('status', 'Borrador enviado a revision.');
     }
 
     public function cancelPending(Request $request)
@@ -529,10 +542,10 @@ class ProviderProfileController extends Controller
             ->first();
 
         if (!$pending) {
-            return back()->with('status', 'No hay una petición pendiente.');
+            return back()->with('status', 'No hay una peticion pendiente.');
         }
 
-        // limpiar foto subida si no es la actual del perfil
+        // Limpiar foto subida si no es la actual del perfil.
         $payload = is_array($pending->payload)
             ? $pending->payload
             : (json_decode($pending->payload, true) ?? []);
@@ -540,16 +553,17 @@ class ProviderProfileController extends Controller
         if (!empty($payload['photo_path']) && $payload['photo_path'] !== $profile->photo_path) {
             try {
                 Storage::disk('public')->delete($payload['photo_path']);
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
-        // Importante: respetamos el CHECK constraint (pending/approved/rejected)
-        $pending->status      = 'rejected';
+        // Importante: respetamos el CHECK constraint (pending/approved/rejected).
+        $pending->status = 'rejected';
         $pending->reviewed_by = $user->id;
         $pending->reviewed_at = now();
-        $pending->reason      = 'Cancelado por el usuario';
+        $pending->reason = 'Cancelado por el usuario';
         $pending->save();
 
-        return back()->with('status', 'Petición anulada. Ya podés editar tu perfil.');
+        return back()->with('status', 'Peticion anulada. Ya podes editar tu perfil.');
     }
 }

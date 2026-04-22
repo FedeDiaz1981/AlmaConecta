@@ -2,7 +2,7 @@ databases:
   - name: alma-db
     plan: free
     databaseName: alma
-    ipAllowList: []  # agrega IPs si las necesitás
+    ipAllowList: []  # agrega IPs si las necesitas
 
 services:
   - type: web
@@ -57,17 +57,25 @@ services:
       - key: APP_ENV
         value: production
 
-      # ?? Dejalo en "true" sólo mientras estás depurando errores 500.
+      # Desactivado para produccion para evitar fugas de informacion sensible.
       - key: APP_DEBUG
-        value: "true"
+        value: "false"
 
-      # Setealo en el dashboard (no en git). Formato típico: base64:XXXXXXXX
+      # Setealo en el dashboard (no en git). Formato tipico: base64:XXXXXXXX
       - key: APP_KEY
         sync: false
 
-      # Útil para generar URLs absolutas correctas
+      # Util para generar URLs absolutas correctas.
       - key: APP_URL
         value: https://almaconecta-1.onrender.com
+
+      # Google Tag Manager ID
+      - key: GTM_ID
+        value: GTM-T2KQB9H3
+
+      # Meta Pixel ID
+      - key: FACEBOOK_PIXEL_ID
+        value: "" # Puedes poner el ID aqui o directamente en el dashboard de Render
 
       # Logs de Laravel a stderr (aparecen en Logs de Render)
       - key: LOG_CHANNEL
@@ -75,7 +83,7 @@ services:
       - key: LOG_LEVEL
         value: debug
 
-      # Conexión a la DB administrada por Render
+      # Conexion a la DB administrada por Render
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST

@@ -7,9 +7,42 @@
      {{-- Favicon de la pestaña --}}
     <link rel="icon" type="image/png" href="{{ asset('logo_sin_fondo.png') }}">
 
+    {{-- Google Tag Manager --}}
+    @if(env('GTM_ID'))
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','{{ env('GTM_ID') }}');</script>
+    @endif
+
+    {{-- Meta Pixel Code --}}
+    @if(env('FACEBOOK_PIXEL_ID'))
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '{{ env('FACEBOOK_PIXEL_ID') }}');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id={{ env('FACEBOOK_PIXEL_ID') }}&ev=PageView&noscript=1"
+    /></noscript>
+    @endif
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-blueDeep text-silver min-h-screen flex flex-col">
+    {{-- Google Tag Manager (noscript) --}}
+    @if(env('GTM_ID'))
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ env('GTM_ID') }}"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    @endif
 
     {{-- HEADER --}}
     <header class="border-b border-blueNight/30 bg-white text-carbon">
