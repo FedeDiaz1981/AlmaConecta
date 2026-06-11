@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 
 class Profile extends Model
 {
@@ -100,5 +101,29 @@ class Profile extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(ProfileReport::class)->latest();
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        $path = trim((string) $this->photo_path);
+        if ($path === '') {
+            return null;
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        $normalized = ltrim($path, '/');
+
+        if (str_starts_with($normalized, 'storage/')) {
+            return asset($normalized);
+        }
+
+        if (Storage::disk('public')->exists($normalized)) {
+            return Storage::disk('public')->url($normalized);
+        }
+
+        return null;
     }
 }

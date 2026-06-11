@@ -28,6 +28,23 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'google' => [
+        'tag_manager_id' => env('GTM_ID'),
+    ],
+
+    'facebook' => [
+        'pixel_id' => env('FACEBOOK_PIXEL_ID'),
+    ],
+
+    'whatsapp' => [
+        'bot_phone' => env('WHATSAPP_BOT_PHONE'),
+        'bot_message' => env('WHATSAPP_BOT_MESSAGE', 'Hola, quiero consultar por {profile} en Alma Conecta.'),
+    ],
+
+    'notifications' => [
+        'admin_email' => env('ADMIN_NOTIFICATION_EMAIL'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

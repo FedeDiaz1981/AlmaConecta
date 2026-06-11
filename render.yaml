@@ -77,6 +77,16 @@ services:
       - key: FACEBOOK_PIXEL_ID
         value: "" # Puedes poner el ID aqui o directamente en el dashboard de Render
 
+      # WhatsApp bot (Manychat/Meta). Completar el numero en el dashboard de Render.
+      - key: WHATSAPP_BOT_PHONE
+        sync: false
+      - key: WHATSAPP_BOT_MESSAGE
+        value: "Hola, quiero consultar por {profile} en Alma Conecta."
+
+      # Email que recibe notificaciones administrativas
+      - key: ADMIN_NOTIFICATION_EMAIL
+        value: almaconecta.oficial@gmail.com
+
       # Logs de Laravel a stderr (aparecen en Logs de Render)
       - key: LOG_CHANNEL
         value: errorlog

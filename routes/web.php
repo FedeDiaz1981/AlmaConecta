@@ -265,8 +265,14 @@ Route::get('/specialties/suggest', function (Request $request) {
         return response()->json([]);
     }
 
+    $needle = mb_strtolower($term);
+
     $specialties = Specialty::query()
-        ->where('name', 'LIKE', "%{$term}%")
+        ->when(DB::getDriverName() === 'pgsql', function ($query) use ($term) {
+            $query->where('name', 'ILIKE', "%{$term}%");
+        }, function ($query) use ($needle) {
+            $query->whereRaw('LOWER(name) LIKE ?', ["%{$needle}%"]);
+        })
         ->orderBy('name')
         ->limit(10)
         ->get(['id', 'name']);
@@ -313,6 +319,7 @@ Route::middleware(['auth', 'can:admin'])
             ->name('approvals.index');
 
         Route::get('/users', [UserApprovalController::class, 'index'])->name('users.index');
+        Route::post('/users/admins', [UserApprovalController::class, 'storeAdmin'])->name('users.admins.store');
         Route::post('/users/{user}/approve', [UserApprovalController::class, 'approve'])->name('users.approve');
         Route::post('/users/{user}/reject', [UserApprovalController::class, 'reject'])->name('users.reject');
         Route::post('/users/{user}/suspend', [UserApprovalController::class, 'suspend'])->name('users.suspend');

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\GenericNotification;
 use App\Models\{Profile, Service, Edit, Specialty, Review};
 
 class ProviderProfileController extends Controller
@@ -522,11 +524,13 @@ class ProviderProfileController extends Controller
             $profile->save();
         }
 
-        Edit::create([
+        $edit = Edit::create([
             'profile_id' => $profile->id,
             'payload'    => $payload,
             'status'     => 'pending',
         ]);
+
+        $this->notifyAdminProfileEdit($profile, $edit);
 
         return back()->with('status', 'Borrador enviado a revision.');
     }
@@ -565,5 +569,29 @@ class ProviderProfileController extends Controller
         $pending->save();
 
         return back()->with('status', 'Peticion anulada. Ya podes editar tu perfil.');
+    }
+
+    private function notifyAdminProfileEdit(Profile $profile, Edit $edit): void
+    {
+        $adminEmail = config('services.notifications.admin_email');
+
+        if (! $adminEmail) {
+            return;
+        }
+
+        try {
+            Mail::to($adminEmail)->send(new GenericNotification(
+                'Cambios de perfil pendientes',
+                [
+                    'Hay cambios de perfil pendientes de revisión.',
+                    'Perfil: '.$profile->display_name,
+                    'Usuario: '.($profile->user?->email ?? 'Sin email asociado'),
+                    'Solicitud ID: '.$edit->id,
+                    'Panel de cambios: '.route('admin.edits.index'),
+                ]
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

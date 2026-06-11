@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    env_file:
+      - .env
+    volumes:
+      - ./database/database.sqlite:/var/www/html/database/database.sqlite
+      - ./storage:/var/www/html/storage
+    command:
+      - bash
+      - -lc
+      - >-
+        set -e;
+        php artisan optimize:clear || true;
+        php artisan storage:link || true;
+        apache2-foreground
+    restart: unless-stopped

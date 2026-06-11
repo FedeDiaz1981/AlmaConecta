@@ -8,9 +8,11 @@ use App\Models\Profile;
 use App\Models\Edit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules;
 
 class UserApprovalController extends Controller
 {
@@ -39,6 +41,42 @@ class UserApprovalController extends Controller
             ->paginate(20);
 
         return view('admin.users_index', compact('pending', 'suspended'));
+    }
+
+    /**
+     * Crear una cuenta administradora desde el panel.
+     */
+    public function storeAdmin(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'name.required' => 'Ingresá el nombre del nuevo administrador.',
+            'email.required' => 'Ingresá el email del nuevo administrador.',
+            'email.email' => 'El email no tiene un formato válido.',
+            'email.unique' => 'Ya existe una cuenta con ese email.',
+            'password.required' => 'Ingresá una contraseña para el nuevo administrador.',
+            'password.confirmed' => 'La confirmación de contraseña no coincide.',
+        ]);
+
+        $admin = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role' => 'admin',
+            'account_status' => 'active',
+            'approved_at' => now(),
+        ]);
+
+        $admin->forceFill([
+            'email_verified_at' => now(),
+        ])->save();
+
+        return redirect()
+            ->route('admin.dashboard')
+            ->with('status', 'Cuenta admin creada correctamente.');
     }
 
     /**

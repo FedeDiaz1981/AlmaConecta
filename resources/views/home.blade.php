@@ -93,17 +93,39 @@
                 Conectá con terapeutas, facilitadores y espacios de bienestar en un solo lugar.
             </p>
 
+            @php
+                $searchMode = request('search_mode') === 'zone'
+                    || request()->filled('province_id')
+                    || request()->filled('city_id')
+                    ? 'zone'
+                    : 'specialty';
+            @endphp
+
             {{-- Buscador principal --}}
             <form method="GET" action="{{ route('search') }}"
                 class="hero-search bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
                         mx-auto md:mx-0">
 
                 <div class="flex flex-col gap-4">
+                    <input type="hidden" name="search_mode" id="search_mode" value="{{ $searchMode }}">
+
+                    <div class="grid grid-cols-2 gap-2 rounded-xl border border-blueMid/70 bg-blueNight/70 p-1">
+                        <button type="button"
+                                data-search-mode-option="specialty"
+                                class="search-mode-button rounded-lg px-3 py-2 text-sm font-semibold transition">
+                            Especialidad
+                        </button>
+                        <button type="button"
+                                data-search-mode-option="zone"
+                                class="search-mode-button rounded-lg px-3 py-2 text-sm font-semibold transition">
+                            Zona
+                        </button>
+                    </div>
 
                     {{-- q: texto libre --}}
                     <div class="flex flex-col relative">
                         <label class="text-[14px] font-semibold tracking-wide uppercase text-silver/60 mb-1 text-left">
-                            ¿Qué estás buscando? <span class="text-red-400">*</span>
+                            Especialidad o práctica <span class="text-red-400">*</span>
                         </label>
 
                         <div class="relative">
@@ -111,36 +133,15 @@
                                 name="q"
                                 id="q"
                                 autocomplete="off"
-                                aria-autocomplete="list"
-                                aria-expanded="false"
-                                aria-controls="q-suggest-list"
                                 required
                                 placeholder="Reiki, Yoga, Constelaciones..."
                                 value="{{ request('q') }}"
-                                class="hero-input pr-9">
-
-                            <button type="button" id="q-clear"
-                                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-silver/60 hover:text-silver text-xs">
-                                ✕
-                            </button>
-
-                            {{-- Sugerencias de especialidades --}}
-                            <div id="q-suggest"
-                                 role="listbox"
-                                 class="absolute left-0 right-0 top-full mt-2 z-40 hidden rounded-xl border border-blueMid bg-blueNight shadow-strong overflow-hidden">
-                                <div id="q-suggest-loading" class="hidden px-3 py-2 text-xs text-silver/60">
-                                    Buscando...
-                                </div>
-                                <div id="q-suggest-empty" class="hidden px-3 py-2 text-xs text-silver/60">
-                                    Sin resultados.
-                                </div>
-                                <div id="q-suggest-list" class="py-1 max-h-56 overflow-auto"></div>
-                            </div>
+                                class="hero-input">
                         </div>
                     </div>
 
                     {{-- Provincia + Ciudad (cascada) --}}
-                    <div class="flex flex-col gap-4">
+                    <div id="zone-search-fields" class="{{ $searchMode === 'zone' ? '' : 'hidden' }} flex flex-col gap-4">
 
                         {{-- Provincia --}}
                         <div class="flex flex-col relative">
@@ -192,9 +193,10 @@
 
                     {{-- remoto + buscar --}}
                     <div class="flex flex-col gap-2">
-                        <label class="flex items-center gap-2 text-[14px] text-silver/70 text-left">
+                        <label id="remote-search-field" class="{{ $searchMode === 'zone' ? '' : 'hidden' }} flex items-center gap-2 text-[14px] text-silver/70 text-left">
                             <input type="checkbox"
                                 name="remote"
+                                id="remote"
                                 value="1"
                                 class="h-4 w-4 rounded border-blueNight bg-blueNight/70 text-gold focus:ring-gold"
                                 {{ request()->boolean('remote', true) ? 'checked' : '' }}>
@@ -474,11 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inputs
     const qInput  = document.getElementById('q');
-    const qClear  = document.getElementById('q-clear');
-    const qSuggest = document.getElementById('q-suggest');
-    const qSuggestList = document.getElementById('q-suggest-list');
-    const qSuggestEmpty = document.getElementById('q-suggest-empty');
-    const qSuggestLoading = document.getElementById('q-suggest-loading');
 
     const provinciaSelect = document.getElementById('provinciaSelect');
     const provinciaList   = document.getElementById('provinciaList');
@@ -489,6 +486,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const provinceNameEl  = document.getElementById('province_name');
     const cityIdEl        = document.getElementById('city_id');
     const cityNameEl      = document.getElementById('city_name');
+    const modeInput       = document.getElementById('search_mode');
+    const modeButtons     = [...document.querySelectorAll('[data-search-mode-option]')];
+    const zoneFields      = document.getElementById('zone-search-fields');
+    const remoteField     = document.getElementById('remote-search-field');
+    const remoteInput     = document.getElementById('remote');
+    const zoneRequestFields = [provinceIdEl, provinceNameEl, cityIdEl, cityNameEl, remoteInput].filter(Boolean);
 
     // Modal
     const modal      = document.getElementById('validation-modal');
@@ -520,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const getMissing = () => {
         if (!qInput || qInput.value.trim() === '') {
-            return { msg: 'Completá “¿Qué estás buscando?”.', field: qInput };
+            return { msg: 'Completá la especialidad o práctica que querés buscar.', field: qInput };
         }
         return null;
     };
@@ -571,211 +574,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ----- Q (texto libre) -----
     if (qInput) {
-        const syncQClear = () => {
-            if (!qClear) return;
-            qClear.classList.toggle('hidden', qInput.value.trim() === '');
-        };
-
-        const setPicked = (value) => {
-            qInput.value = value || '';
-            qInput.dataset.picked = '1';
-            qInput.readOnly = true;
-            qInput.setAttribute('aria-disabled', 'true');
-            qInput.classList.add('opacity-80', 'cursor-not-allowed');
-            hideSuggest();
-            syncQClear();
-            updateSearchButtonState();
-        };
-
-        const clearPicked = () => {
-            qInput.readOnly = false;
-            qInput.removeAttribute('aria-disabled');
-            qInput.classList.remove('opacity-80', 'cursor-not-allowed');
-            qInput.dataset.picked = '0';
-            qInput.value = '';
-            hideSuggest();
-            syncQClear();
-            updateSearchButtonState();
-        };
-
-        const markUnpicked = () => {
-            qInput.dataset.picked = '0';
-            updateSearchButtonState();
-        };
-
-        // ----- Sugerencias de especialidades -----
-        const suggestionCache = new Map();
-        let suggestTimer = null;
-        let suggestAbort = null;
-        let lastSuggestTerm = '';
-        let suppressBlurClear = false;
-
-        const setSuggestExpanded = (isOpen) => {
-            qInput.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        };
-
-        const hideSuggest = () => {
-            if (!qSuggest) return;
-            qSuggest.classList.add('hidden');
-            setSuggestExpanded(false);
-        };
-
-        const showSuggest = () => {
-            if (!qSuggest) return;
-            qSuggest.classList.remove('hidden');
-            setSuggestExpanded(true);
-        };
-
-        const setSuggestState = ({ loading = false, empty = false }) => {
-            if (qSuggestLoading) qSuggestLoading.classList.toggle('hidden', !loading);
-            if (qSuggestEmpty) qSuggestEmpty.classList.toggle('hidden', !empty);
-        };
-
-        const renderSuggestions = (items) => {
-            if (!qSuggestList) return;
-            qSuggestList.innerHTML = '';
-
-            if (!items || items.length === 0) {
-                setSuggestState({ loading: false, empty: true });
-                return;
-            }
-
-            setSuggestState({ loading: false, empty: false });
-
-            const frag = document.createDocumentFragment();
-            items.forEach((item) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.setAttribute('role', 'option');
-                btn.dataset.name = item.name || '';
-                btn.className = 'w-full text-left px-3 py-2 text-sm text-silver hover:bg-blueDeep/60 transition';
-                btn.textContent = item.name || '';
-                frag.appendChild(btn);
-            });
-            qSuggestList.appendChild(frag);
-        };
-
-        const fetchSuggestions = async (term) => {
-            if (qInput.readOnly) return;
-            const q = (term || '').trim();
-            if (q.length < 1) {
-                hideSuggest();
-                return;
-            }
-
-            lastSuggestTerm = q;
-
-            if (suggestionCache.has(q)) {
-                renderSuggestions(suggestionCache.get(q));
-                showSuggest();
-                return;
-            }
-
-            setSuggestState({ loading: true, empty: false });
-            showSuggest();
-
-            if (suggestAbort) suggestAbort.abort();
-            suggestAbort = new AbortController();
-
-            try {
-                const url = new URL('/specialties/suggest', window.location.origin);
-                url.searchParams.set('q', q);
-
-                const res = await fetch(url.toString(), {
-                    headers: { 'Accept': 'application/json' },
-                    signal: suggestAbort.signal,
-                });
-
-                if (!res.ok) throw new Error('No OK');
-
-                const data = await res.json();
-                const items = Array.isArray(data) ? data : [];
-
-                suggestionCache.set(q, items);
-
-                // Si el input cambiÃ³ mientras venÃ­a la respuesta, no renderizamos
-                if (qInput.value.trim() !== q) return;
-
-                renderSuggestions(items);
-                showSuggest();
-            } catch (e) {
-                if (e?.name === 'AbortError') return;
-                renderSuggestions([]);
-                showSuggest();
-            }
-        };
-
-        const scheduleSuggest = (term) => {
-            if (suggestTimer) clearTimeout(suggestTimer);
-            suggestTimer = setTimeout(() => fetchSuggestions(term), 200);
-        };
-
         qInput.addEventListener('input', () => {
-            if (qInput.readOnly) return;
-            const term = qInput.value || '';
-            markUnpicked();
-            syncQClear();
             updateSearchButtonState();
-            scheduleSuggest(term);
         });
-
-        qInput.addEventListener('focus', () => {
-            if (qInput.readOnly) return;
-            const term = qInput.value || '';
-            if (term.trim().length >= 1) {
-                scheduleSuggest(term);
-            }
-        });
-
-        if (qClear) {
-            qClear.addEventListener('click', () => {
-                clearPicked();
-                qInput.focus();
-            });
-        }
-
-        if (qSuggestList) {
-            qSuggestList.addEventListener('mousedown', () => {
-                suppressBlurClear = true;
-                setTimeout(() => { suppressBlurClear = false; }, 0);
-            });
-            qSuggestList.addEventListener('click', (e) => {
-                const btn = e.target.closest('button[data-name]');
-                if (!btn) return;
-                setPicked(btn.dataset.name || '');
-            });
-        }
-
-        qInput.addEventListener('blur', () => {
-            setTimeout(() => {
-                if (suppressBlurClear) return;
-                hideSuggest();
-            }, 120);
-        });
-
-        // Cerrar sugerencias al click afuera
-        document.addEventListener('click', (e) => {
-            if (!qSuggest || qSuggest.classList.contains('hidden')) return;
-            if (qSuggest.contains(e.target) || qInput.contains(e.target) || qClear?.contains(e.target)) return;
-            hideSuggest();
-        });
-
-        // Cerrar con ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                hideSuggest();
-            }
-        });
-
-        // init
-        if (qInput.value.trim() !== '') {
-            setPicked(qInput.value.trim());
-        } else {
-            qInput.dataset.picked = '0';
-            syncQClear();
-        }
     }
 
     // ----- Cascada Provincia/Ciudad -----
@@ -794,6 +596,47 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = label || placeholder;
     };
 
+    const currentSearchMode = () => modeInput?.value === 'zone' ? 'zone' : 'specialty';
+
+    const syncModeButtons = () => {
+        const activeMode = currentSearchMode();
+
+        modeButtons.forEach((btn) => {
+            const isActive = btn.dataset.searchModeOption === activeMode;
+            btn.classList.toggle('bg-gold', isActive);
+            btn.classList.toggle('text-blueDeep', isActive);
+            btn.classList.toggle('shadow-soft', isActive);
+            btn.classList.toggle('text-silver/70', !isActive);
+            btn.classList.toggle('hover:bg-blueMid/50', !isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    };
+
+    const setSearchMode = (mode) => {
+        const nextMode = mode === 'zone' ? 'zone' : 'specialty';
+        const isZone = nextMode === 'zone';
+
+        if (modeInput) modeInput.value = nextMode;
+
+        zoneFields?.classList.toggle('hidden', !isZone);
+        remoteField?.classList.toggle('hidden', !isZone);
+        zoneRequestFields.forEach((field) => {
+            field.disabled = !isZone;
+        });
+
+        if (!isZone) {
+            closeList(provinciaList);
+            closeList(ciudadList);
+        }
+
+        syncModeButtons();
+        updateSearchButtonState();
+    };
+
+    modeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => setSearchMode(btn.dataset.searchModeOption));
+    });
+
     const renderList = (listEl, items) => {
         if (!listEl) return;
         if (!items || items.length === 0) {
@@ -811,15 +654,17 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     };
 
-    const resetCity = (placeholder = 'Primero elegí una provincia') => {
+    const resetCity = (placeholder = 'Primero elegí una provincia', clearValues = true) => {
         if (!ciudadSelect) return;
         ciudadSelect.disabled = true;
         ciudadSelect.classList.add('opacity-60', 'cursor-not-allowed');
         setButtonLabel(ciudadSelect, '', placeholder);
         closeList(ciudadList);
 
-        if (cityIdEl) cityIdEl.value = '';
-        if (cityNameEl) cityNameEl.value = '';
+        if (clearValues) {
+            if (cityIdEl) cityIdEl.value = '';
+            if (cityNameEl) cityNameEl.value = '';
+        }
         updateSearchButtonState();
     };
 
@@ -969,7 +814,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // init
-    resetCity();
+    resetCity(undefined, false);
+    setSearchMode(currentSearchMode());
     loadProvinces();
     updateSearchButtonState();
 });

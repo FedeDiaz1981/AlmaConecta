@@ -45,21 +45,16 @@ RUN { \
 } > /usr/local/etc/php/conf.d/uploads.ini
 
 # --------------------------------------------
-# Extensiones y Apache
+# Apache para servir Laravel desde /public
 # --------------------------------------------
-RUN apt-get update && apt-get install -y \
-      git unzip libpq-dev libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql zip \
-    && a2enmod rewrite headers expires \
-    \
-    # Cambiar DocumentRoot a /public
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo_pgsql \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN a2enmod rewrite headers expires \
     && sed -ri 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/*.conf \
     && sed -ri 's|/var/www/|/var/www/html/public/|g' /etc/apache2/apache2.conf \
-    \
-    # Permitir .htaccess
     && sed -ri 's/AllowOverride[[:space:]]+None/AllowOverride All/g' /etc/apache2/apache2.conf \
-    \
-    # ServerName + permisos
     && printf "\nServerName localhost\n<Directory /var/www/html/public>\n    AllowOverride All\n    Require all granted\n</Directory>\n" \
        >> /etc/apache2/apache2.conf
 

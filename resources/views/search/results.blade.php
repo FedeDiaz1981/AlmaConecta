@@ -3,6 +3,33 @@
 @section('title', 'Resultados de búsqueda')
 
 @section('content')
+    @php
+        $dynamicFilters = $dynamicFilters ?? [
+            'enabled' => false,
+            'base_total' => 0,
+            'has_groups' => false,
+            'active_count' => 0,
+            'locations' => [],
+            'specialties' => [],
+            'ratings' => [],
+            'modalities' => [],
+        ];
+        $selectedDynamicFilters = $selectedDynamicFilters ?? [
+            'locations' => [],
+            'specialties' => [],
+            'rating' => null,
+            'modality' => null,
+        ];
+        $showDynamicFilters = $dynamicFilters['enabled'] && $dynamicFilters['has_groups'];
+        $clearDynamicParams = request()->except([
+            'filter_locations',
+            'filter_specialties',
+            'filter_rating',
+            'filter_modality',
+            'page',
+        ]);
+    @endphp
+
     <div class="py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -66,6 +93,13 @@
                         </span>
                     @endif
 
+                    @if(($dynamicFilters['active_count'] ?? 0) > 0)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blueDeep/70 px-3 py-1 text-xs">
+                            <span class="opacity-70">Filtros:</span>
+                            <span class="font-semibold">{{ $dynamicFilters['active_count'] }}</span>
+                        </span>
+                    @endif
+
                     <a href="{{ route('home') }}"
                        class="ml-auto text-xs text-gold hover:text-goldLight">
                         Modificar búsqueda
@@ -77,11 +111,24 @@
             <form method="GET" action="{{ route('search') }}"
                   class="mb-6 rounded-2xl border border-blueMid/70 bg-blueNight/60 px-4 py-3">
                 <input type="hidden" name="q" value="{{ $q }}">
+                <input type="hidden" name="search_mode" value="{{ $search_mode ?? 'specialty' }}">
                 <input type="hidden" name="province_id" value="{{ $province_id ?? '' }}">
                 <input type="hidden" name="province_name" value="{{ $province_name ?? '' }}">
                 <input type="hidden" name="city_id" value="{{ $city_id ?? '' }}">
                 <input type="hidden" name="city_name" value="{{ $city_name ?? '' }}">
                 <input type="hidden" name="remote" value="{{ $remote ? '1' : '0' }}">
+                @foreach(($selectedDynamicFilters['locations'] ?? []) as $locationKey)
+                    <input type="hidden" name="filter_locations[]" value="{{ $locationKey }}">
+                @endforeach
+                @foreach(($selectedDynamicFilters['specialties'] ?? []) as $specialtyId)
+                    <input type="hidden" name="filter_specialties[]" value="{{ $specialtyId }}">
+                @endforeach
+                @if(!empty($selectedDynamicFilters['rating']))
+                    <input type="hidden" name="filter_rating" value="{{ $selectedDynamicFilters['rating'] }}">
+                @endif
+                @if(!empty($selectedDynamicFilters['modality']))
+                    <input type="hidden" name="filter_modality" value="{{ $selectedDynamicFilters['modality'] }}">
+                @endif
                 @if(!empty($all))
                     <input type="hidden" name="all" value="1">
                 @endif
@@ -119,6 +166,137 @@
                 </div>
             </form>
 
+            <div class="{{ $showDynamicFilters ? 'lg:grid lg:grid-cols-[17rem_1fr] lg:gap-5 lg:items-start' : '' }}">
+                @if($showDynamicFilters)
+                    <aside class="hidden lg:block">
+                        <form method="GET" action="{{ route('search') }}"
+                              class="sticky top-5 rounded-2xl border border-blueMid/70 bg-blueNight/80 px-4 py-4 text-sm text-silver/85 shadow-soft">
+                            <input type="hidden" name="q" value="{{ $q }}">
+                            <input type="hidden" name="search_mode" value="{{ $search_mode ?? 'specialty' }}">
+                            <input type="hidden" name="word" value="{{ $word ?? '' }}">
+                            <input type="hidden" name="sort" value="{{ $sort ?? 'rating_desc' }}">
+                            <input type="hidden" name="province_id" value="{{ $province_id ?? '' }}">
+                            <input type="hidden" name="province_name" value="{{ $province_name ?? '' }}">
+                            <input type="hidden" name="city_id" value="{{ $city_id ?? '' }}">
+                            <input type="hidden" name="city_name" value="{{ $city_name ?? '' }}">
+                            <input type="hidden" name="remote" value="{{ $remote ? '1' : '0' }}">
+                            @if(!empty($all))
+                                <input type="hidden" name="all" value="1">
+                            @endif
+                            @if(!empty($featured))
+                                <input type="hidden" name="featured" value="1">
+                            @endif
+
+                            <div class="mb-4 flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 class="text-sm font-semibold text-silver">Afinar resultados</h2>
+                                    <p class="mt-1 text-xs text-silver/55">
+                                        Detectados sobre {{ $dynamicFilters['base_total'] }} resultados.
+                                    </p>
+                                </div>
+                                @if(($dynamicFilters['active_count'] ?? 0) > 0)
+                                    <a href="{{ route('search', $clearDynamicParams) }}"
+                                       class="text-xs font-semibold text-gold hover:text-goldLight">
+                                        Limpiar
+                                    </a>
+                                @endif
+                            </div>
+
+                            <div class="space-y-5">
+                                @if(!empty($dynamicFilters['locations']))
+                                    <fieldset>
+                                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-silver/60">Localidad</legend>
+                                        <div class="space-y-2">
+                                            @foreach($dynamicFilters['locations'] as $option)
+                                                <label class="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-blueDeep/50">
+                                                    <input type="checkbox"
+                                                           name="filter_locations[]"
+                                                           value="{{ $option['key'] }}"
+                                                           class="mt-0.5 h-4 w-4 rounded border-blueMid bg-blueDeep text-gold focus:ring-gold"
+                                                           {{ $option['selected'] ? 'checked' : '' }}>
+                                                    <span class="min-w-0 flex-1">
+                                                        <span class="block truncate text-xs text-silver">{{ $option['label'] }}</span>
+                                                        <span class="text-[11px] text-silver/50">{{ $option['count'] }} resultados</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+                                @endif
+
+                                @if(!empty($dynamicFilters['specialties']))
+                                    <fieldset>
+                                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-silver/60">Especialidad</legend>
+                                        <div class="space-y-2">
+                                            @foreach($dynamicFilters['specialties'] as $option)
+                                                <label class="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-blueDeep/50">
+                                                    <input type="checkbox"
+                                                           name="filter_specialties[]"
+                                                           value="{{ $option['id'] }}"
+                                                           class="mt-0.5 h-4 w-4 rounded border-blueMid bg-blueDeep text-gold focus:ring-gold"
+                                                           {{ $option['selected'] ? 'checked' : '' }}>
+                                                    <span class="min-w-0 flex-1">
+                                                        <span class="block truncate text-xs text-silver">{{ $option['label'] }}</span>
+                                                        <span class="text-[11px] text-silver/50">{{ $option['count'] }} resultados</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+                                @endif
+
+                                @if(!empty($dynamicFilters['ratings']))
+                                    <fieldset>
+                                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-silver/60">Calificación</legend>
+                                        <div class="space-y-2">
+                                            @foreach($dynamicFilters['ratings'] as $option)
+                                                <label class="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-blueDeep/50">
+                                                    <input type="radio"
+                                                           name="filter_rating"
+                                                           value="{{ $option['key'] }}"
+                                                           class="mt-0.5 h-4 w-4 border-blueMid bg-blueDeep text-gold focus:ring-gold"
+                                                           {{ $option['selected'] ? 'checked' : '' }}>
+                                                    <span class="min-w-0 flex-1">
+                                                        <span class="block truncate text-xs text-silver">{{ $option['label'] }}</span>
+                                                        <span class="text-[11px] text-silver/50">{{ $option['count'] }} resultados</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+                                @endif
+
+                                @if(!empty($dynamicFilters['modalities']))
+                                    <fieldset>
+                                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-silver/60">Modalidad</legend>
+                                        <div class="space-y-2">
+                                            @foreach($dynamicFilters['modalities'] as $option)
+                                                <label class="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-blueDeep/50">
+                                                    <input type="radio"
+                                                           name="filter_modality"
+                                                           value="{{ $option['key'] }}"
+                                                           class="mt-0.5 h-4 w-4 border-blueMid bg-blueDeep text-gold focus:ring-gold"
+                                                           {{ $option['selected'] ? 'checked' : '' }}>
+                                                    <span class="min-w-0 flex-1">
+                                                        <span class="block truncate text-xs text-silver">{{ $option['label'] }}</span>
+                                                        <span class="text-[11px] text-silver/50">{{ $option['count'] }} resultados</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+                                @endif
+
+                                <button type="submit"
+                                        class="w-full rounded-full bg-gold px-4 py-2.5 text-sm font-semibold text-blueDeep shadow-soft hover:bg-goldStrong">
+                                    Aplicar filtros
+                                </button>
+                            </div>
+                        </form>
+                    </aside>
+                @endif
+
+                <div>
             {{-- Resultados --}}
             <div class="max-h-[70vh] overflow-y-auto pr-1">
                 @forelse($results as $p)
@@ -179,7 +357,14 @@
                             </div>
 
                             {{-- Distancia --}}
-                            <div class="text-right min-w-[6rem]">
+                            <div class="text-right min-w-[6rem] space-y-2">
+                                @if(($p->reviews_count ?? 0) > 0)
+                                    <div class="inline-flex flex-col items-end rounded-xl bg-blueDeep/70 px-3 py-1 text-xs text-silver/90 border border-blueMid/70">
+                                        <span class="font-semibold text-gold">{{ number_format((float) $p->reviews_avg_rating, 1) }} / 5</span>
+                                        <span class="text-[11px] text-silver/55">{{ $p->reviews_count }} reseñas</span>
+                                    </div>
+                                @endif
+
                                 @if(!is_null($p->distance ?? null))
                                     <div class="inline-flex items-center rounded-full bg-blueDeep/80 px-3 py-1 text-xs text-silver/90 border border-blueMid/70">
                                         {{ number_format($p->distance, 1) }} km
@@ -205,6 +390,8 @@
                     {{ $results->withQueryString()->links() }}
                 </div>
             @endif
+                </div>
+            </div>
         </div>
     </div>
 @endsection

@@ -18,6 +18,7 @@ storage/*.cache
 /node_modules/
 /public/build
 /public/hot
+/storage/vite.hot
 
 # Storage público (se genera con storage:link)
 public/storage

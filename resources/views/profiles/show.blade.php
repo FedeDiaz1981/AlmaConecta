@@ -15,12 +15,23 @@
         }
     }
 
-    $waDigits = preg_replace('/\D+/', '', (string)$profile->whatsapp);
-    $waLink   = $waDigits ? ('https://wa.me/'.$waDigits.'?text='.rawurlencode('Hola, te contacto desde tu perfil en Alma Conecta.')) : null;
+    $botPhone = trim((string) config('services.whatsapp.bot_phone'));
+    $whatsappTarget = $botPhone !== '' ? $botPhone : (string) $profile->whatsapp;
+    $waDigits = preg_replace('/\D+/', '', $whatsappTarget);
+    $waMessageTemplate = trim((string) config('services.whatsapp.bot_message'));
+    $waMessage = $botPhone !== '' && $waMessageTemplate !== ''
+        ? str_replace(
+            ['{profile}', '{slug}', '{url}'],
+            [$profile->display_name, $profile->slug, route('profiles.show', $profile->slug)],
+            $waMessageTemplate
+        )
+        : 'Hola, te contacto desde tu perfil en Alma Conecta.';
+    $waLink   = $waDigits ? ('https://wa.me/'.$waDigits.'?text='.rawurlencode($waMessage)) : null;
     $email    = $profile->contact_email ?: optional($profile->user)->email;
     $mailto   = $email ? ('mailto:'.$email.'?subject='.rawurlencode('Consulta desde tu perfil en Alma Conecta')) : null;
 
-    $hasPhoto = !empty($profile->photo_path);
+    $photoUrl = $profile->photo_url;
+    $hasPhoto = !empty($photoUrl);
     $hasVideo = !empty($embed);
     $isClient = auth()->check() && (auth()->user()->role ?? null) === 'client';
 @endphp
@@ -59,7 +70,7 @@
                                 @endif
                                 class="group inline-block rounded-3xl border border-blueMid bg-blueDeep/60 p-3 shadow-soft hover:border-gold/70 hover:bg-blueDeep/80 transition text-left max-w-xs w-full">
                             @if($hasPhoto)
-                                <img src="{{ asset('storage/'.$profile->photo_path) }}"
+                                <img src="{{ $photoUrl }}"
                                      alt="{{ $profile->display_name }}"
                                      class="w-full h-auto rounded-2xl object-cover shadow-md">
                             @else
@@ -320,7 +331,7 @@
                     <div class="p-4 space-y-4">
                         @if($hasPhoto)
                             <div class="w-full">
-                                <img src="{{ asset('storage/'.$profile->photo_path) }}"
+                                <img src="{{ $photoUrl }}"
                                      alt="Foto de {{ $profile->display_name }}"
                                      class="w-full h-auto rounded-2xl object-contain">
                             </div>

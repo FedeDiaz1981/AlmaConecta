@@ -24,8 +24,33 @@ class SearchController extends Controller
         $q = trim((string) $request->input('q', ''));
         $word = trim((string) $request->input('word', ''));
         $sort = trim((string) $request->input('sort', 'rating_desc'));
+        if (!in_array($sort, ['rating_desc', 'name_desc'], true)) {
+            $sort = 'rating_desc';
+        }
+
         $featured = $request->boolean('featured', false);
         $all = $request->boolean('all', false);
+        $searchMode = $request->input('search_mode') === 'zone' ? 'zone' : 'specialty';
+        $selectedDynamicFilters = [
+            'locations' => collect((array) $request->input('filter_locations', []))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'specialties' => collect((array) $request->input('filter_specialties', []))
+                ->map(fn ($value) => (int) $value)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'rating' => in_array($request->input('filter_rating'), ['excellent', 'very_good', 'good', 'low', 'unrated'], true)
+                ? $request->input('filter_rating')
+                : null,
+            'modality' => in_array($request->input('filter_modality'), ['remote', 'presential', 'both'], true)
+                ? $request->input('filter_modality')
+                : null,
+        ];
 
         // Nueva fuente de verdad para ubicación:
         $provinceId   = trim((string) $request->input('province_id', ''));
@@ -45,6 +70,8 @@ class SearchController extends Controller
         // Base de búsqueda
         $base = Profile::query()
             ->with('specialties')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->whereIn('status', ['approved', 'active'])
             ->where('is_suspended', false);
 
@@ -88,12 +115,12 @@ class SearchController extends Controller
 
         $applySort = function ($query) use ($sort) {
             if ($sort === 'name_desc') {
-                return $query->orderBy('display_name', 'desc');
+                return $query
+                    ->orderBy('display_name', 'desc')
+                    ->orderByDesc('id');
             }
 
             // default: relevancia = mejor rating
-            $query = $query->withAvg('reviews', 'rating');
-
             if (DB::getDriverName() === 'pgsql') {
                 return $query
                     ->orderByRaw('reviews_avg_rating DESC NULLS LAST')
@@ -113,54 +140,6 @@ class SearchController extends Controller
          * Nota: agrupamos con where(function) para que el OR no rompa el resto de filtros.
          */
         $perPage = $featured ? 10 : 15;
-
-        if ($featured) {
-            $results = $applySort($base)
-                ->paginate($perPage);
-
-            return view('search.results', [
-                'results' => $results,
-                'q'       => $q,
-                'word'    => $word,
-                'sort'    => $sort,
-                'featured' => true,
-                'all'     => $all,
-                'loc'     => $locText,
-                'lat'     => $lat,
-                'lng'     => $lng,
-                'r'       => $radius,
-                'remote'  => $remote,
-
-                'province_id'   => $provinceId,
-                'province_name' => $provinceName,
-                'city_id'       => $cityId,
-                'city_name'     => $cityName,
-            ]);
-        }
-
-        if ($all) {
-            $results = $applySort($base)
-                ->paginate($perPage);
-
-            return view('search.results', [
-                'results' => $results,
-                'q'       => $q,
-                'word'    => $word,
-                'sort'    => $sort,
-                'featured' => false,
-                'all'     => true,
-                'loc'     => $locText,
-                'lat'     => $lat,
-                'lng'     => $lng,
-                'r'       => $radius,
-                'remote'  => $remote,
-
-                'province_id'   => $provinceId,
-                'province_name' => $provinceName,
-                'city_id'       => $cityId,
-                'city_name'     => $cityName,
-            ]);
-        }
 
         $applyLocation = function ($query) use ($cityId, $provinceId, $remote) {
             if ($cityId !== '') {
@@ -197,26 +176,256 @@ class SearchController extends Controller
             return $query->where('mode_presential', true);
         };
 
-        $results = $applySort($applyLocation($base))->paginate($perPage);
+        if (!$featured && !$all) {
+            $base = $applyLocation($base);
+        }
+
+        $baseTotal = (clone $base)->count();
+        $dynamicFilters = $this->buildDynamicFilters($base, $baseTotal, $selectedDynamicFilters);
+
+        $query = clone $base;
+        if ($dynamicFilters['selected_ids'] !== null) {
+            $ids = $dynamicFilters['selected_ids'];
+            $query->whereIn('profiles.id', $ids !== [] ? $ids : [0]);
+        }
+
+        $results = $applySort($query)->paginate($perPage);
 
         return view('search.results', [
             'results' => $results,
             'q'       => $q,
             'word'    => $word,
             'sort'    => $sort,
-            'featured' => false,
-            'all'     => false,
+            'featured' => $featured,
+            'all'     => $all,
             'loc'     => $locText,
             'lat'     => $lat,
             'lng'     => $lng,
             'r'       => $radius,
             'remote'  => $remote,
+            'search_mode' => $searchMode,
+            'dynamicFilters' => $dynamicFilters,
+            'selectedDynamicFilters' => $selectedDynamicFilters,
 
             'province_id'   => $provinceId,
             'province_name' => $provinceName,
             'city_id'       => $cityId,
             'city_name'     => $cityName,
         ]);
+    }
+
+    private function buildDynamicFilters($query, int $baseTotal, array $selected): array
+    {
+        $activeCount = $this->activeDynamicFilterCount($selected);
+        $empty = [
+            'enabled' => false,
+            'base_total' => $baseTotal,
+            'has_groups' => false,
+            'active_count' => $activeCount,
+            'locations' => [],
+            'specialties' => [],
+            'ratings' => [],
+            'modalities' => [],
+            'selected_ids' => null,
+        ];
+
+        if ($baseTotal <= 10 && $activeCount === 0) {
+            return $empty;
+        }
+
+        $profiles = (clone $query)->get();
+
+        $locations = $profiles
+            ->map(fn (Profile $profile) => $this->locationFacet($profile))
+            ->filter()
+            ->groupBy('key')
+            ->map(fn ($items, $key) => [
+                'key' => $key,
+                'label' => $items->first()['label'],
+                'count' => $items->count(),
+                'selected' => in_array($key, $selected['locations'], true),
+            ])
+            ->sortBy([
+                ['count', 'desc'],
+                ['label', 'asc'],
+            ])
+            ->take(12)
+            ->values()
+            ->all();
+
+        $specialties = $profiles
+            ->flatMap(fn (Profile $profile) => $profile->specialties->map(fn ($specialty) => [
+                'id' => (int) $specialty->id,
+                'name' => $specialty->name,
+            ]))
+            ->groupBy('id')
+            ->map(fn ($items, $id) => [
+                'id' => (int) $id,
+                'label' => $items->first()['name'],
+                'count' => $items->count(),
+                'selected' => in_array((int) $id, $selected['specialties'], true),
+            ])
+            ->sortBy([
+                ['count', 'desc'],
+                ['label', 'asc'],
+            ])
+            ->take(12)
+            ->values()
+            ->all();
+
+        $ratingLabels = [
+            'excellent' => '4.5 o más',
+            'very_good' => '4.0 a 4.4',
+            'good' => '3.0 a 3.9',
+            'low' => 'Menos de 3.0',
+            'unrated' => 'Sin calificación',
+        ];
+
+        $ratings = $profiles
+            ->map(fn (Profile $profile) => $this->ratingFacetKey($profile->reviews_avg_rating))
+            ->countBy()
+            ->map(fn ($count, $key) => [
+                'key' => $key,
+                'label' => $ratingLabels[$key] ?? $key,
+                'count' => $count,
+                'selected' => $selected['rating'] === $key,
+            ])
+            ->sortBy(fn ($item) => array_search($item['key'], array_keys($ratingLabels), true))
+            ->values()
+            ->all();
+
+        $modalityLabels = [
+            'remote' => 'Online/remota',
+            'presential' => 'Presencial',
+            'both' => 'Ambas',
+        ];
+
+        $modalities = $profiles
+            ->map(fn (Profile $profile) => $this->modalityFacetKey($profile))
+            ->filter()
+            ->countBy()
+            ->map(fn ($count, $key) => [
+                'key' => $key,
+                'label' => $modalityLabels[$key] ?? $key,
+                'count' => $count,
+                'selected' => $selected['modality'] === $key,
+            ])
+            ->sortBy(fn ($item) => array_search($item['key'], array_keys($modalityLabels), true))
+            ->values()
+            ->all();
+
+        $filteredProfiles = $profiles;
+
+        if ($selected['locations'] !== []) {
+            $filteredProfiles = $filteredProfiles->filter(function (Profile $profile) use ($selected) {
+                $facet = $this->locationFacet($profile);
+
+                return $facet && in_array($facet['key'], $selected['locations'], true);
+            });
+        }
+
+        if ($selected['specialties'] !== []) {
+            $filteredProfiles = $filteredProfiles->filter(fn (Profile $profile) =>
+                $profile->specialties->pluck('id')->map(fn ($id) => (int) $id)->intersect($selected['specialties'])->isNotEmpty()
+            );
+        }
+
+        if ($selected['rating']) {
+            $filteredProfiles = $filteredProfiles->filter(fn (Profile $profile) =>
+                $this->ratingFacetKey($profile->reviews_avg_rating) === $selected['rating']
+            );
+        }
+
+        if ($selected['modality']) {
+            $filteredProfiles = $filteredProfiles->filter(fn (Profile $profile) =>
+                $this->modalityFacetKey($profile) === $selected['modality']
+            );
+        }
+
+        return [
+            'enabled' => $baseTotal > 10,
+            'base_total' => $baseTotal,
+            'has_groups' => $baseTotal > 10 && (count($locations) > 1 || count($specialties) > 1 || count($ratings) > 1 || count($modalities) > 1),
+            'active_count' => $activeCount,
+            'locations' => count($locations) > 1 ? $locations : [],
+            'specialties' => count($specialties) > 1 ? $specialties : [],
+            'ratings' => count($ratings) > 1 ? $ratings : [],
+            'modalities' => count($modalities) > 1 ? $modalities : [],
+            'selected_ids' => $activeCount > 0 ? $filteredProfiles->pluck('id')->values()->all() : null,
+        ];
+    }
+
+    private function activeDynamicFilterCount(array $selected): int
+    {
+        return count($selected['locations'])
+            + count($selected['specialties'])
+            + ($selected['rating'] ? 1 : 0)
+            + ($selected['modality'] ? 1 : 0);
+    }
+
+    private function locationFacet(Profile $profile): ?array
+    {
+        $city = trim((string) ($profile->city_name ?: $profile->city));
+        $state = trim((string) ($profile->province_name ?: $profile->state));
+
+        if ($city === '' && $state === '') {
+            return null;
+        }
+
+        $payload = [
+            'city_id' => (string) ($profile->city_id ?? ''),
+            'province_id' => (string) ($profile->province_id ?? ''),
+            'city' => $city,
+            'state' => $state,
+        ];
+
+        $label = trim(implode(', ', array_filter([$city, $state])));
+        $key = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
+
+        return [
+            'key' => $key,
+            'label' => $label,
+        ];
+    }
+
+    private function ratingFacetKey($avgRating): string
+    {
+        if ($avgRating === null) {
+            return 'unrated';
+        }
+
+        $rating = (float) $avgRating;
+
+        if ($rating >= 4.5) {
+            return 'excellent';
+        }
+
+        if ($rating >= 4.0) {
+            return 'very_good';
+        }
+
+        if ($rating >= 3.0) {
+            return 'good';
+        }
+
+        return 'low';
+    }
+
+    private function modalityFacetKey(Profile $profile): ?string
+    {
+        if ($profile->mode_remote && $profile->mode_presential) {
+            return 'both';
+        }
+
+        if ($profile->mode_remote) {
+            return 'remote';
+        }
+
+        if ($profile->mode_presential) {
+            return 'presential';
+        }
+
+        return null;
     }
 
     public function show(string $slug, Request $request)

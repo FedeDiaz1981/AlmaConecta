@@ -44,6 +44,74 @@
                     </div>
                 </div>
 
+                @if(session('status'))
+                    <div class="mb-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                <div class="mb-5 rounded-2xl border border-blueMid/70 bg-blueDeep/50 px-4 py-4">
+                    <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-silver">Agregar cuenta admin</h3>
+                            <p class="text-xs text-silver/55">
+                                La cuenta queda activa y con permisos administrativos inmediatamente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.users.admins.store') }}"
+                          class="grid gap-3 md:grid-cols-[1fr_1.2fr_1fr_1fr_auto] md:items-end">
+                        @csrf
+
+                        <div>
+                            <label for="admin-name" class="mb-1 block text-xs text-silver/70">Nombre</label>
+                            <input id="admin-name"
+                                   name="name"
+                                   value="{{ old('name') }}"
+                                   autocomplete="name"
+                                   class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2 text-sm text-blueDeep placeholder-slate-500 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold"
+                                   placeholder="Nombre">
+                        </div>
+
+                        <div>
+                            <label for="admin-email" class="mb-1 block text-xs text-silver/70">Email</label>
+                            <input id="admin-email"
+                                   type="email"
+                                   name="email"
+                                   value="{{ old('email') }}"
+                                   autocomplete="email"
+                                   class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2 text-sm text-blueDeep placeholder-slate-500 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold"
+                                   placeholder="admin@dominio.com">
+                        </div>
+
+                        <div>
+                            <label for="admin-password" class="mb-1 block text-xs text-silver/70">Contraseña</label>
+                            <input id="admin-password"
+                                   type="password"
+                                   name="password"
+                                   autocomplete="new-password"
+                                   class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2 text-sm text-blueDeep placeholder-slate-500 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold"
+                                   placeholder="Contraseña">
+                        </div>
+
+                        <div>
+                            <label for="admin-password-confirmation" class="mb-1 block text-xs text-silver/70">Confirmar</label>
+                            <input id="admin-password-confirmation"
+                                   type="password"
+                                   name="password_confirmation"
+                                   autocomplete="new-password"
+                                   class="w-full rounded-xl border border-blueMid bg-white/95 px-3 py-2 text-sm text-blueDeep placeholder-slate-500 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold"
+                                   placeholder="Confirmar">
+                        </div>
+
+                        <button type="submit"
+                                class="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-blueDeep shadow-soft transition hover:bg-goldStrong">
+                            Crear admin
+                        </button>
+                    </form>
+                </div>
+
                 @if ($users->isEmpty())
                     <p class="text-silver/70 text-sm">
                         No hay usuarios activos ni suspendidos para mostrar.
