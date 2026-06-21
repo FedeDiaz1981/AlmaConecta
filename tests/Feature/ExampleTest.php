@@ -12,6 +12,13 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
+        $response = $this->get(route('landing', absolute: false));
+
+        $response->assertStatus(200);
+    }
+
+    public function test_portal_page_returns_a_successful_response(): void
+    {
         $response = $this->get(route('home', absolute: false));
 
         $response->assertStatus(200);

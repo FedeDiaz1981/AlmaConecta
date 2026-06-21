@@ -170,7 +170,7 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
 | Público
 |--------------------------------------------------------------------------
 */
-Route::redirect('/', '/portal');
+Route::view('/', 'landing')->name('landing');
 
 Route::get('/portal', function () use ($safe) {
     if (env('BYPASS_HOME', false)) {
