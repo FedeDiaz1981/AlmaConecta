@@ -170,7 +170,9 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
 | Público
 |--------------------------------------------------------------------------
 */
-Route::get('/', function () use ($safe) {
+Route::redirect('/', '/portal');
+
+Route::get('/portal', function () use ($safe) {
     if (env('BYPASS_HOME', false)) {
         try {
             $now   = DB::select('select now() as now');
