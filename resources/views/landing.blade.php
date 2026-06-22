@@ -34,11 +34,17 @@
       justify-content: flex-start;
     }
 
-    .footer-brand__logo img {
+    .footer .footer-brand__logo {
       display: block;
-      width: min(280px, 100%);
+      width: 170px;
       height: auto;
-      margin-bottom: 18px;
+      margin-bottom: 4px;
+      transform: scale(1.65);
+      transform-origin: left center;
+    }
+
+    .footer-brand {
+      max-width: 420px;
     }
 
     .hero-buttons {
