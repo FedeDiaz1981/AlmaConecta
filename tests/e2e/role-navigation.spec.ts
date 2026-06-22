@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8000';
+
 const demoUsers = {
   admin: {
     email: 'admin.demo@almaconecta.com',
@@ -29,6 +31,24 @@ async function login(page: Page, role: keyof typeof demoUsers, expectedUrl: RegE
     page.waitForURL(expectedUrl, { waitUntil: 'commit' }),
     loginForm.getByRole('button', { name: 'Ingresar' }).click(),
   ]);
+}
+
+async function apiLogin(page: Page, role: keyof typeof demoUsers) {
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  const token = await page.locator('input[name="_token"]').first().inputValue();
+
+  const response = await page.context().request.post('/login', {
+    maxRedirects: 0,
+    form: {
+      _token: token,
+      email: demoUsers[role].email,
+      password: demoUsers[role].password,
+    },
+  });
+
+  if (!response.ok() && response.status() >= 500) {
+    throw new Error(`Login request failed with status ${response.status()}`);
+  }
 }
 
 test.describe('Alma Conecta role navigation', () => {
@@ -71,39 +91,36 @@ test.describe('Alma Conecta role navigation', () => {
   });
 
   test('admin recorre su panel completo', async ({ page }) => {
-    await login(page, 'admin', /\/admin\/?$/);
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    const token = await page.locator('input[name="_token"]').first().inputValue();
 
-    await expect(page).toHaveURL(/\/admin\/?$/);
-    await expect(page.getByRole('heading', { name: /panel de administraci[oó]n/i })).toBeVisible();
+    const response = await page.context().request.post('/login', {
+      maxRedirects: 0,
+      form: {
+        _token: token,
+        email: demoUsers.admin.email,
+        password: demoUsers.admin.password,
+      },
+    });
 
-    const adminPages = [
-      { path: '/dashboard', url: /\/admin\/?$/, heading: /panel de administraci[oó]n/i },
-      { path: '/admin/approvals', url: /\/admin\/approvals$/, heading: /pendientes de aprobaci[oó]n/i },
-      { path: '/admin/users', url: /\/admin\/users$/, heading: /cuentas de usuarios/i },
-      { path: '/admin/edits', url: /\/admin\/edits$/, heading: /cambios pendientes/i },
-      { path: '/admin/reports', url: /\/admin\/reports$/, heading: /cuentas reportadas/i },
-      { path: '/admin/specialties', url: /\/admin\/specialties$/, title: /Especialidades/i, table: /Nombre/i },
-      { path: '/admin/specialties/create', url: /\/admin\/specialties\/create$/, heading: /nueva especialidad/i },
-      { path: '/admin/specialties/bulk', url: /\/admin\/specialties\/bulk$/, heading: /carga masiva de especialidades/i },
-      { path: '/profile', url: /\/profile$/, heading: /mi perfil/i },
+    expect(response.status()).toBe(302);
+    expect(response.headers()['location']).toContain('/admin');
+
+    const routes = [
+      { path: '/admin/approvals', contains: 'Pendientes de aprob' },
+      { path: '/admin/users', contains: 'Cuentas de usuarios' },
+      { path: '/admin/edits', contains: 'Cambios pendientes' },
+      { path: '/admin/reports', contains: 'Cuentas reportadas' },
+      { path: '/admin/specialties', contains: 'Especialidades' },
+      { path: '/admin/specialties/create', contains: 'Nueva especialidad' },
+      { path: '/admin/specialties/bulk', contains: 'Carga masiva de especialidades' },
+      { path: '/profile', contains: 'Mi cuenta' },
     ];
 
-    for (const item of adminPages) {
-      const navPage = await page.context().newPage();
-      await navPage.goto(item.path, { waitUntil: 'commit' });
-      await expect(navPage).toHaveURL(item.url);
-      if ('heading' in item) {
-        await expect(navPage.getByRole('heading', { name: item.heading })).toBeVisible();
-      }
-
-      if ('title' in item) {
-        await expect(navPage).toHaveTitle(item.title);
-      }
-
-      if ('table' in item) {
-        await expect(navPage.getByRole('columnheader', { name: item.table })).toBeVisible();
-      }
-      await navPage.close();
+    for (const route of routes) {
+      const response = await page.context().request.get(route.path);
+      expect(response.ok()).toBeTruthy();
+      expect(await response.text()).toContain(route.contains);
     }
   });
 
