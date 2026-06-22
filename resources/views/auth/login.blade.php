@@ -3,7 +3,7 @@
 @section('title', 'Ingresar')
 
 @section('content')
-    <div class="py-12">
+    <div class="pt-4 pb-12 sm:py-12">
         <div class="max-w-md mx-auto px-4 sm:px-6">
             <div class="bg-blueNight/80 border border-blueMid shadow-soft rounded-2xl p-6 sm:p-8">
 

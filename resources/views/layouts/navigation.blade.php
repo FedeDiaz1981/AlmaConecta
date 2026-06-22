@@ -11,7 +11,7 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('home') }}" class="inline-flex items-center gap-2">
+                    <a href="{{ route('landing') }}" class="inline-flex items-center gap-2">
                         <x-application-logo class="block h-9 w-auto text-gray-800" />
                         <span class="sr-only">Inicio</span>
                     </a>

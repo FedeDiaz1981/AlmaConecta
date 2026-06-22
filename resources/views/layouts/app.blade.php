@@ -11,16 +11,30 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-blueDeep text-silver min-h-screen flex flex-col">
+<body class="m-0 p-0 bg-blueDeep text-silver min-h-screen flex flex-col">
     @include('partials.tracking-body')
 
+    @php
+        $hideLandingLinks = request()->routeIs(
+            'login',
+            'register',
+            'password.request',
+            'password.email',
+            'password.reset',
+            'password.confirm',
+            'verification.notice',
+            'verification.verify',
+            'verification.send'
+        );
+    @endphp
+
     {{-- HEADER --}}
-    <header class="border-b border-blueNight/30 bg-white text-carbon">
+    <header class="sticky top-0 z-30 border-b border-blueNight/30 bg-white text-carbon" style="margin-top: -25px;">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-4">
 
             {{-- IZQUIERDA: LOGO + BUSCADOR --}}
             <div class="flex items-center gap-4 flex-1 min-w-0">
-                <a href="{{ route('home') }}" class="flex items-center gap-2 whitespace-nowrap">
+                <a href="{{ route('landing') }}" class="flex items-center gap-2 whitespace-nowrap">
                     <img
                         src="{{ asset('logo_sin_fondo.png') }}"
                         alt="Alma Conecta"
@@ -58,6 +72,7 @@
             {{-- DERECHA: LINKS / BOTONES (DESKTOP) --}}
             <div class="hidden md:flex items-center gap-3 text-sm">
                 @guest
+                    @unless($hideLandingLinks)
                     {{-- Invitado: un solo link → registro --}}
                     <a href="{{ route('register') }}" class="hover:text-gold whitespace-nowrap">
                         Publicá tu espacio
@@ -71,6 +86,17 @@
                        class="px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong whitespace-nowrap">
                         Ingresar
                     </a>
+                    @endunless
+                    @if($hideLandingLinks)
+                        <a href="{{ route('landing') }}"
+                           class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-blueNight/30 text-sm font-semibold text-blueDeep hover:bg-blueNight/5 mt-1">
+                            Volver al inicio
+                        </a>
+                        <a href="{{ route('home') }}"
+                           class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
+                            Volver al portal
+                        </a>
+                    @endif
                 @else
                     @php $user = auth()->user(); @endphp
 
@@ -163,6 +189,7 @@
                     </button>
 
                     @guest
+                        @unless($hideLandingLinks)
                         {{-- Invitado: un solo link → registro --}}
                         <a href="{{ route('register') }}" class="hover:text-gold">
                             Publicá tu espacio
@@ -170,11 +197,24 @@
                         <a href="{{ route('register', ['account_type' => 'client']) }}" class="hover:text-gold">
                             Busco un profesional
                         </a>
+                        @endunless
+                        @if($hideLandingLinks)
+                            <a href="{{ route('landing') }}"
+                               class="inline-flex items-center justify-center px-4 py-1.5 rounded-md border border-blueNight/30 text-sm font-semibold text-blueDeep hover:bg-blueNight/5 mt-1">
+                                Volver al inicio
+                            </a>
+                            <a href="{{ route('home') }}"
+                               class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
+                                Volver al portal
+                            </a>
+                        @endif
 
-                        <a href="{{ route('login') }}"
-                           class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
-                            Ingresar
-                        </a>
+                        @unless($hideLandingLinks)
+                            <a href="{{ route('login') }}"
+                               class="inline-flex items-center justify-center px-4 py-1.5 rounded-md bg-gold text-white text-sm font-semibold hover:bg-goldStrong mt-1">
+                                Ingresar
+                            </a>
+                        @endunless
                     @else
                         @php $user = auth()->user(); @endphp
 

@@ -66,6 +66,11 @@ img {
     gap: 14px
 }
 
+.header-actions .cta-pair > .btn {
+    min-width: 172px;
+    white-space: nowrap;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -570,7 +575,7 @@ img {
 .map > div {
     position: relative;
     z-index: 2;
-    max-width: 58%
+    max-width: 50%
 }
 
 .map p {
@@ -591,13 +596,56 @@ img {
     z-index: 3
 }
 
+.map-actions {
+    position: absolute;
+    left: 34px;
+    bottom: 6px;
+    right: auto;
+    top: auto;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(240px, 28vw);
+    align-items: stretch;
+    z-index: 3;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .45s ease, transform .45s ease;
+    pointer-events: none;
+}
+
+.map.is-visible .map-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: .75s;
+}
+
+.map-actions.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.map-actions .map-cta {
+    position: static;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    padding: 11px 16px;
+    font-size: 13px;
+}
+
 .map img {
     position: absolute;
-    right: calc(-1 * max(2%, calc((100vw - 1010px) / 2) - 74px));
-    top: 50%;
+    right: calc(-1 * max(2%, calc((100vw - 1010px) / 2) - 196px));
+    top: 56%;
     max-height: none;
     max-width: none;
-    width: min(100%, 544px);
+    width: min(100%, 440px);
     height: auto;
     opacity: 0;
     transform: translateX(72px) translateY(-50%);
@@ -1007,6 +1055,16 @@ img {
         margin: 14px auto 0;
         padding: 12px 26px;
         font-size: 13px
+    }
+
+    .map-actions {
+        position: static;
+        left: auto;
+        top: auto;
+        transform: none;
+        align-items: flex-start;
+        width: auto;
+        margin-top: 14px;
     }
 
     .map img {

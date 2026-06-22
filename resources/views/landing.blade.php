@@ -10,6 +10,195 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ asset('landing/assets/css/styles.css') }}">
   @include('partials.tracking-head')
+  <style>
+    .cta-pair {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .cta-pair > .btn {
+      min-height: 46px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .cta-pair--left {
+      justify-content: flex-start;
+    }
+
+    .footer-brand__logo img {
+      display: block;
+      width: min(280px, 100%);
+      height: auto;
+      margin-bottom: 18px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .cta-pair {
+        flex-wrap: wrap;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(7, 26, 56, 0.72);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-backdrop.is-open {
+      display: flex;
+    }
+
+    .register-modal {
+      position: relative;
+      width: min(100%, 520px);
+      border-radius: 22px;
+      border: 1px solid rgba(216, 161, 61, 0.3);
+      background: linear-gradient(180deg, #fffaf2 0%, #fff 100%);
+      box-shadow: 0 28px 80px rgba(2, 6, 23, 0.34);
+      color: #10243f;
+      overflow: hidden;
+    }
+
+    .register-modal__header {
+      padding: 24px 24px 10px;
+    }
+
+    .register-modal__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #b67b20;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .register-modal__title {
+      margin: 0;
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      line-height: 1.05;
+      color: #071a38;
+    }
+
+    .register-modal__body {
+      padding: 0 24px 24px;
+    }
+
+    .register-modal__text {
+      margin: 12px 0 20px;
+      color: #516175;
+      line-height: 1.5;
+    }
+
+    .register-modal__choices {
+      display: grid;
+      gap: 12px;
+    }
+
+    .register-choice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px solid #eadfce;
+      background: #fff;
+      color: #10243f;
+      cursor: pointer;
+      text-align: left;
+      box-shadow: 0 10px 28px rgba(17, 34, 61, 0.08);
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+
+    .register-choice:hover,
+    .register-choice:focus-visible {
+      transform: translateY(-1px);
+      border-color: #d8a13d;
+      box-shadow: 0 16px 34px rgba(216, 161, 61, 0.18);
+      outline: none;
+    }
+
+    .register-choice strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .register-choice span {
+      display: block;
+      font-size: 13px;
+      color: #637083;
+      line-height: 1.4;
+    }
+
+    .register-modal__close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid #eadfce;
+      background: #fff;
+      color: #10243f;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    @media (max-width: 640px) {
+      .register-modal__header,
+      .register-modal__body {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .register-modal__title {
+        font-size: 26px;
+      }
+
+      .register-choice {
+        padding: 14px 16px;
+      }
+    }
+  </style>
 </head>
 <body>
   @include('partials.tracking-body')
@@ -27,7 +216,10 @@
       <a href="#comunidad">Comunidad</a>
     </nav>
     <div class="header-actions">
-      <a class="btn btn-gold" href="{{ route('home') }}">Ir al portal</a>
+      <div class="cta-pair">
+        <a class="btn btn-gold" href="{{ route('home') }}">Ir al portal</a>
+        <button type="button" class="btn btn-outline" data-register-open>Registrarse</button>
+      </div>
     </div>
   </header>
 
@@ -43,8 +235,10 @@
         <h1>Encontrá el <span>bienestar</span><br>que estás buscando</h1>
         <p>Conectamos personas con terapeutas, facilitadores<br>y espacios holísticos de confianza.</p>
         <div class="hero-buttons">
-          <a class="btn btn-gold" href="{{ route('home') }}">Ingresar al portal</a>
-          <a class="btn btn-outline" href="#como-funciona">Cómo funciona</a>
+          <div class="cta-pair">
+            <a class="btn btn-gold" href="{{ route('home') }}">Ir al portal</a>
+            <button type="button" class="btn btn-outline" data-register-open>Registrarse</button>
+          </div>
         </div>
       </div>
     </section>
@@ -73,7 +267,10 @@
     </section>
 
     <div class="mid-cta-wrap">
-      <a class="btn btn-gold mid-cta" href="{{ route('home') }}">Ir al portal</a>
+      <div class="cta-pair">
+        <a class="btn btn-gold mid-cta" href="{{ route('home') }}">Ir al portal</a>
+        <button type="button" class="btn btn-outline mid-cta" data-register-open>Registrarse</button>
+      </div>
     </div>
 
     <section class="section" id="categorias">
@@ -103,7 +300,10 @@
           <p><b>♡ Recibí consultas</b><br>Conectá con personas que buscan tu ayuda.</p>
           <p><b>◇ Generá confianza</b><br>Construí tu reputación con valoraciones.</p>
         </div>
-        <a class="btn btn-gold" href="{{ route('home') }}">Ir al portal</a>
+        <div class="cta-pair cta-pair--left">
+          <a class="btn btn-gold" href="{{ route('home') }}">Ir al portal</a>
+          <button type="button" class="btn btn-outline" data-register-open>Registrarse</button>
+        </div>
       </div>
     </section>
 
@@ -133,7 +333,10 @@
           <p>Más de 2.000 profesionales y espacios distribuidos en todo el país.</p>
         </div>
         <img src="{{ asset('landing/assets/img/mapa-argentina-bienestar.png') }}" alt="Mapa Argentina">
-        <a class="btn btn-gold map-cta" href="{{ route('home') }}">Ir al portal</a>
+        <div class="map-actions">
+          <a class="btn btn-gold map-cta" href="{{ route('home') }}">Ir al portal</a>
+          <button type="button" class="btn btn-outline map-cta" data-register-open>Registrarse</button>
+        </div>
       </div>
     </section>
 
@@ -151,7 +354,7 @@
 
   <footer class="footer">
     <div class="footer-brand">
-      <img src="{{ asset('landing/assets/img/logo-navbar.png') }}" alt="Alma Conecta">
+      <img class="footer-brand__logo" src="{{ asset('landing/assets/img/logo-navbar-footer-transparent.png') }}" alt="Alma Conecta">
       <p>El punto de encuentro entre quienes buscan bienestar y quienes acompañan caminos de transformación.</p>
     </div>
     <nav>
@@ -181,6 +384,92 @@
     </div>
   </footer>
 
+  <div id="register-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="register-modal" role="dialog" aria-modal="true" aria-labelledby="register-modal-title">
+      <button type="button" class="register-modal__close" data-register-close aria-label="Cerrar modal">×</button>
+      <div class="register-modal__header">
+        <div class="register-modal__eyebrow">Registrate</div>
+        <h2 id="register-modal-title" class="register-modal__title">Elegí cómo querés sumarte</h2>
+      </div>
+      <div class="register-modal__body">
+        <p class="register-modal__text">
+          Te llevamos directo al formulario correcto según el tipo de cuenta que quieras crear.
+        </p>
+        <div class="register-modal__choices">
+          <button
+            type="button"
+            class="register-choice"
+            data-register-href="{{ route('register', ['account_type' => 'provider']) }}"
+          >
+            <span>
+              <strong>Quiero publicar mi espacio</strong>
+              <span>Crear una cuenta profesional para ofrecer terapias, talleres o servicios.</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </button>
+
+          <button
+            type="button"
+            class="register-choice"
+            data-register-href="{{ route('register', ['account_type' => 'client']) }}"
+          >
+            <span>
+              <strong>Busco un profesional</strong>
+              <span>Crear una cuenta para buscar, contactar y guardar favoritos.</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ asset('landing/assets/js/app.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('register-modal');
+      const openButtons = document.querySelectorAll('[data-register-open]');
+      const closeButton = document.querySelector('[data-register-close]');
+      const choiceButtons = document.querySelectorAll('[data-register-href]');
+
+      const openModal = () => {
+        if (!modal) return;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      };
+
+      const closeModal = () => {
+        if (!modal) return;
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      };
+
+      openButtons.forEach((button) => button.addEventListener('click', openModal));
+      closeButton?.addEventListener('click', closeModal);
+
+      modal?.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+
+      choiceButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const href = button.dataset.registerHref;
+          if (href) {
+            window.location.href = href;
+          }
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeModal();
+        }
+      });
+    });
+  </script>
 </body>
 </html>
