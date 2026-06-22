@@ -5,7 +5,7 @@
     <title>@yield('title', 'Alma Conecta')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
      {{-- Favicon de la pestaña --}}
-    <link rel="icon" type="image/png" href="{{ asset('logo_sin_fondo.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
 
     @include('partials.tracking-head')
 

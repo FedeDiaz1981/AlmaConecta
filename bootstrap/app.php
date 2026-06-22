@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Middleware\BlockSuspendedUsers;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\BlockSuspendedUsers; // 👈 nuestro middleware
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,13 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Que corra primero en el stack web (bloquea antes de ejecutar nada más)
-        $middleware->web(prepend: [
-            BlockSuspendedUsers::class,
-        ]);
+        $middleware->append(BlockSuspendedUsers::class);
 
-        // Si preferís también global, podés mantener:
-        // $middleware->append(BlockSuspendedUsers::class);
+        $middleware->validateCsrfTokens(except: [
+            'login',
+            'register',
+            'forgot-password',
+            'reset-password',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

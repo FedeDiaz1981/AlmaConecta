@@ -46,7 +46,7 @@ $safe = function ($action) {
 
 /*
 |--------------------------------------------------------------------------
-| Diagnóstico / utilidades
+| DiagnÃ³stico / utilidades
 |--------------------------------------------------------------------------
 */
 Route::get('/whoami', fn () => auth()->check()
@@ -97,7 +97,7 @@ Route::get('/healthz', function () {
     ], $db === 'up' ? 200 : 503);
 });
 
-// Ver último log de Laravel (solo en debug)
+// Ver Ãºltimo log de Laravel (solo en debug)
 Route::get('/__log', function () {
     if (!config('app.debug')) {
         abort(404);
@@ -105,7 +105,7 @@ Route::get('/__log', function () {
 
     $path = storage_path('logs/laravel.log');
     if (!is_file($path)) {
-        return response('No hay laravel.log aún.', 200);
+        return response('No hay laravel.log aÃºn.', 200);
     }
 
     $content = @file_get_contents($path);
@@ -115,7 +115,17 @@ Route::get('/__log', function () {
         ->header('Content-Type', 'text/html');
 });
 
-// Diagnóstico del pivot (solo lectura)
+    }
+
+    $request->session()->put('probe', now()->toDateTimeString());
+
+    return response()->json([
+        'session_id' => $request->session()->getId(),
+        'probe' => $request->session()->get('probe'),
+    ])->cookie('probe_cookie', 'abc', 5);
+});
+
+// DiagnÃ³stico del pivot (solo lectura)
 Route::get('/diag/pivot', function () use ($safe) {
     return $safe(function () {
         if (!Schema::hasTable('profile_service')) {
@@ -167,7 +177,7 @@ Route::get('/__seed-admin', function (Request $r) use ($safe) {
 
 /*
 |--------------------------------------------------------------------------
-| Público
+| PÃºblico
 |--------------------------------------------------------------------------
 */
 Route::view('/', 'landing')->name('landing');
@@ -192,7 +202,7 @@ Route::get('/portal', function () use ($safe) {
 
 /*
 |----------------------------------------------------------------------
-| ✅ GeoRef endpoints
+| âœ… GeoRef endpoints
 |----------------------------------------------------------------------
 */
 Route::get('/geo/provincias', function () use ($safe) {
@@ -203,12 +213,12 @@ Route::get('/geo/ciudades', function () use ($safe) {
     return $safe(fn () => app(GeoRefController::class)->ciudades(request()));
 })->name('geo.ciudades');
 
-// ✅ NUEVO: validación/sugerencias de dirección completa (calle + altura)
+// âœ… NUEVO: validaciÃ³n/sugerencias de direcciÃ³n completa (calle + altura)
 Route::get('/geo/address-suggest', function () use ($safe) {
     return $safe(fn () => app(GeoRefController::class)->addressSuggest(request()));
 })->name('geo.address_suggest');
 
-// (Opcional si lo usás) sugerencias de calles
+// (Opcional si lo usÃ¡s) sugerencias de calles
 Route::get('/geo/street-suggest', function () use ($safe) {
     return $safe(fn () => app(GeoRefController::class)->streetSuggest(request()));
 })->name('geo.street_suggest');
@@ -220,21 +230,21 @@ Route::get('/geo/street-preload', function () use ($safe) {
 
 /*
 |--------------------------------------------------------------------------
-| Búsqueda
+| BÃºsqueda
 |--------------------------------------------------------------------------
 */
 Route::get('/search', function () use ($safe) {
     return $safe(fn () => app(SearchController::class)->search(request()));
 })->name('search');
 
-// Perfil público por slug
+// Perfil pÃºblico por slug
 Route::get('/p/{slug}', [SearchController::class, 'show'])
     ->where('slug', '[A-Za-z0-9\-]+')
     ->name('profiles.show');
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard (selector según rol)
+| Dashboard (selector segÃºn rol)
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function () {
@@ -284,7 +294,7 @@ Route::get('/specialties/suggest', function (Request $request) {
 
 /*
 |--------------------------------------------------------------------------
-| Área autenticada (no admin)
+| Ãrea autenticada (no admin)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
@@ -298,7 +308,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/dashboard/profile', [ProviderProfileController::class, 'saveDraft'])->name('dashboard.profile.save');
     Route::post('/dashboard/profile/cancel', [ProviderProfileController::class, 'cancelPending'])->name('dashboard.profile.cancel');
 
-    // Reseñas (clientes)
+    // ReseÃ±as (clientes)
     Route::post('/profiles/{profile}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::delete('/profiles/{profile}/reviews', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 

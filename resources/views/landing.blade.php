@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Alma Conecta - Bienestar holístico</title>
   <meta name="description" content="Conectamos personas con terapeutas, facilitadores y espacios holísticos de confianza.">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
+  <link rel="shortcut icon" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
+  <link rel="apple-touch-icon" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -38,7 +41,7 @@
       display: block;
       width: 170px;
       height: auto;
-      margin-bottom: 4px;
+      margin-bottom: 16px;
       transform: scale(1.65);
       transform-origin: left center;
     }
@@ -281,7 +284,7 @@
 
     <section class="section" id="categorias">
       <div class="section-title">
-        <h2>Categorías destacadas</h2><a href="{{ route('search', ['all' => 1]) }}">Ver todas</a>
+        <h2>Categorías destacadas</h2>
       </div>
       <div class="cat-grid">
         <article><img src="{{ asset('landing/assets/img/categoria-reiki.png') }}"><span>Reiki</span></article>

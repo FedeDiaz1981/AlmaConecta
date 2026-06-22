@@ -42,6 +42,7 @@ WORKDIR /var/www/html
 RUN { \
   echo "upload_max_filesize=10M"; \
   echo "post_max_size=12M"; \
+  echo "session.save_path=/var/www/html/storage/framework/sessions"; \
 } > /usr/local/etc/php/conf.d/uploads.ini
 
 # --------------------------------------------
