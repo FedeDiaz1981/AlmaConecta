@@ -1,6 +1,6 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
-@section('title', 'Panel de administración')
+@section('title', 'Mi perfil profesional - Alma Conecta')
 
 @section('content')
     @php
@@ -1186,3 +1186,4 @@
         })();
     </script>
 @endsection
+

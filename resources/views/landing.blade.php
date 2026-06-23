@@ -1,10 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Alma Conecta - Bienestar holístico</title>
   <meta name="description" content="Conectamos personas con terapeutas, facilitadores y espacios holísticos de confianza.">
+  <link rel="canonical" href="{{ route('landing') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
   <link rel="shortcut icon" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
   <link rel="apple-touch-icon" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
@@ -236,11 +237,11 @@
     <section class="hero">
       <picture class="hero-bg">
         <source media="(max-width: 640px)" srcset="{{ asset('landing/assets/img/hero-home-mobile.png') }}">
-        <img src="{{ asset('landing/assets/img/hero_home.png') }}" alt="Paisaje de bienestar holístico">
+        <img src="{{ asset('landing/assets/img/hero_home.png') }}" alt="Paisaje de bienestar holístico" width="1781" height="883">
       </picture>
       <div class="hero-overlay"></div>
       <div class="hero-content">
-        <img class="hero-logo" src="{{ asset('landing/assets/img/logo-simbolo-hero.png') }}" alt="">
+        <img class="hero-logo" src="{{ asset('landing/assets/img/logo-simbolo-hero.png') }}" alt="" aria-hidden="true" width="1536" height="1024">
         <h1>Encontrá el <span>bienestar</span><br>que estás buscando</h1>
         <p>Conectamos personas con terapeutas, facilitadores<br>y espacios holísticos de confianza.</p>
         <div class="hero-buttons">
@@ -287,19 +288,19 @@
         <h2>Categorías destacadas</h2>
       </div>
       <div class="cat-grid">
-        <article><img src="{{ asset('landing/assets/img/categoria-reiki.png') }}"><span>Reiki</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-yoga.png') }}"><span>Yoga</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-acupuntura.png') }}"><span>Acupuntura</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-meditacion.png') }}"><span>Meditación</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-constelaciones.png') }}"><span>Constelaciones</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-masajes.png') }}"><span>Masajes</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-feng-shui.png') }}"><span>Feng Shui</span></article>
-        <article><img src="{{ asset('landing/assets/img/categoria-sonoterapia.png') }}"><span>Sonoterapia</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-reiki.png') }}" alt="Reiki" width="1626" height="967"><span>Reiki</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-yoga.png') }}" alt="Yoga" width="1821" height="864"><span>Yoga</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-acupuntura.png') }}" alt="Acupuntura" width="1536" height="1024"><span>Acupuntura</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-meditacion.png') }}" alt="Meditación" width="1672" height="941"><span>Meditación</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-constelaciones.png') }}" alt="Constelaciones" width="1536" height="1024"><span>Constelaciones</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-masajes.png') }}" alt="Masajes" width="1536" height="1024"><span>Masajes</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-feng-shui.png') }}" alt="Feng Shui" width="1536" height="1024"><span>Feng Shui</span></article>
+        <article><img src="{{ asset('landing/assets/img/categoria-sonoterapia.png') }}" alt="Sonoterapia" width="1536" height="1024"><span>Sonoterapia</span></article>
       </div>
     </section>
 
     <section class="professional" id="pro">
-      <img src="{{ asset('landing/assets/img/profesional-terapias-cuencos.png') }}" alt="Profesional holística">
+      <img src="{{ asset('landing/assets/img/profesional-terapias-cuencos.png') }}" alt="Profesional holística" width="1498" height="1050">
       <div>
         <span>Para profesionales</span>
         <h2>Hacé crecer tu práctica</h2>
@@ -320,7 +321,7 @@
       <div class="testimonials">
         <h2>Historias reales</h2>
         <article>
-          <img src="{{ asset('landing/assets/img/avatar-carla.jpg') }}" alt="Carla G.">
+          <img src="{{ asset('landing/assets/img/avatar-carla.jpg') }}" alt="Carla G." width="44" height="45">
           <div>
             <b>★★★★★</b>
             <p>“Encontré a mi terapeuta ideal en pocos minutos. Alma Conecta cambió mi bienestar.”</p>
@@ -328,7 +329,7 @@
           </div>
         </article>
         <article>
-          <img src="{{ asset('landing/assets/img/avatar-diego.jpg') }}" alt="Diego M.">
+          <img src="{{ asset('landing/assets/img/avatar-diego.jpg') }}" alt="Diego M." width="44" height="44">
           <div>
             <b>★★★★★</b>
             <p>“Me permitió dar a conocer mis servicios y conseguir nuevos consultantes.”</p>
@@ -341,7 +342,7 @@
           <h2>Un mapa de bienestar</h2>
           <p>Más de 2.000 profesionales y espacios distribuidos en todo el país.</p>
         </div>
-        <img src="{{ asset('landing/assets/img/mapa-argentina-bienestar.png') }}" alt="Mapa Argentina">
+        <img src="{{ asset('landing/assets/img/mapa-argentina-bienestar.png') }}" alt="Mapa de Argentina" width="1024" height="1536">
         <div class="map-actions">
           <a class="btn btn-gold map-cta" href="{{ route('home') }}">Ir al portal</a>
           <button type="button" class="btn btn-outline map-cta" data-register-open>Registrarse</button>
@@ -363,7 +364,7 @@
 
   <footer class="footer">
     <div class="footer-brand">
-      <img class="footer-brand__logo" src="{{ asset('landing/assets/img/logo-navbar-footer-transparent.png') }}" alt="Alma Conecta">
+      <img class="footer-brand__logo" src="{{ asset('landing/assets/img/logo-navbar-footer-transparent.png') }}" alt="Alma Conecta" width="1206" height="336">
       <p>El punto de encuentro entre quienes buscan bienestar y quienes acompañan caminos de transformación.</p>
     </div>
     <nav>
@@ -482,3 +483,6 @@
   </script>
 </body>
 </html>
+
+
+

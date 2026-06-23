@@ -1,6 +1,6 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
-@section('title', 'Mi cuenta')
+@section('title', 'Mi cuenta - Alma Conecta')
 
 @section('content')
     <div class="py-10 bg-blueDeep">
@@ -39,3 +39,4 @@
         </div>
     </div>
 @endsection
+

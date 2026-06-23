@@ -2,8 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>@yield('title', 'Alma Conecta')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @php
+        $routeName = request()->route()?->getName();
+        $defaultTitle = match ($routeName) {
+            'dashboard' => 'Dashboard - Alma Conecta',
+            'search' => 'Resultados de búsqueda - Alma Conecta',
+            default => config('app.name', 'Alma Conecta'),
+        };
+    @endphp
+    <title>@yield('title', $defaultTitle)</title>
+    <meta name="description" content="@yield('meta_description', 'Alma Conecta conecta personas con profesionales, espacios y terapias de bienestar holístico.')">
+    <link rel="canonical" href="@yield('canonical', url()->current())">
      {{-- Favicon de la pestaña --}}
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('landing/assets/img/favicon-alma-conecta-v4.png') }}?v=1">
 
@@ -38,6 +48,8 @@
                     <img
                         src="{{ asset('logo_sin_fondo.png') }}"
                         alt="Alma Conecta"
+                        width="582"
+                        height="577"
                         class="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
                     >
                     <span class="text-lg font-semibold tracking-[0.18em] uppercase text-gold">

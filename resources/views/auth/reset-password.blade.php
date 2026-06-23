@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Restablecer contraseña')
+@section('title', 'Restablecer contraseña - Alma Conecta')
 
 @section('content')
     <div class="py-12">

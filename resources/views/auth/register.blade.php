@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Crear cuenta')
+@section('title', 'Crear cuenta - Alma Conecta')
 
 @section('content')
     <div class="pt-4 pb-12 sm:py-12">

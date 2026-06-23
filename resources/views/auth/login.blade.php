@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Ingresar')
+@section('title', 'Ingresar - Alma Conecta')
 
 @section('content')
     <div class="pt-4 pb-12 sm:py-12">

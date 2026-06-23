@@ -115,15 +115,6 @@ Route::get('/__log', function () {
         ->header('Content-Type', 'text/html');
 });
 
-    }
-
-    $request->session()->put('probe', now()->toDateTimeString());
-
-    return response()->json([
-        'session_id' => $request->session()->getId(),
-        'probe' => $request->session()->get('probe'),
-    ])->cookie('probe_cookie', 'abc', 5);
-});
 
 // DiagnÃ³stico del pivot (solo lectura)
 Route::get('/diag/pivot', function () use ($safe) {

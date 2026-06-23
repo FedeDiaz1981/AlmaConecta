@@ -1,6 +1,6 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
-@section('title', 'Resultados de búsqueda')
+@section('title', 'Resultados de búsqueda - Alma Conecta')
 
 @section('content')
     @php
@@ -32,6 +32,9 @@
 
     <div class="py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="mb-4 text-2xl font-semibold text-silver">
+                Resultados de búsqueda
+            </h1>
 
             {{-- Resumen de búsqueda --}}
             <div class="mb-4 rounded-2xl border border-blueMid bg-blueNight/80 px-4 py-3 text-sm text-silver/90">
@@ -395,3 +398,4 @@
         </div>
     </div>
 @endsection
+

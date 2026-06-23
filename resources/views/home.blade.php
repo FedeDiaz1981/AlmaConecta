@@ -1,6 +1,6 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
-@section('title', 'Alma Conecta - Bienestar holístico')
+@section('title', 'Portal Alma Conecta - Inicio')
 
 @section('content')
 
@@ -850,3 +850,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 @endsection
+

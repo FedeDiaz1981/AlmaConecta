@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>Portal Alma Conecta - Inicio</title>
 
         @include('partials.tracking-head')
 
@@ -279,3 +279,4 @@
         @endif
     </body>
 </html>
+
