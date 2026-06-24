@@ -27,7 +27,8 @@ class SecurityHeaders
             "img-src 'self' data: https:",
             "font-src 'self' https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com",
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
+            "frame-src 'self' https://www.googletagmanager.com",
             "connect-src 'self' https:",
         ]);
 

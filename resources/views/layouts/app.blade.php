@@ -21,7 +21,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="m-0 p-0 bg-blueDeep text-silver min-h-screen flex flex-col">
+<body class="m-0 p-0 bg-blueDeep text-silver min-h-screen flex flex-col overflow-x-hidden">
     @include('partials.tracking-body')
 
     @php

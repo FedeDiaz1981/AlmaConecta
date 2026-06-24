@@ -12,6 +12,10 @@
 <style>
     .hero-scene {
         min-height: 100svh;
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .hero-fade {
@@ -27,12 +31,22 @@
         max-width: 34rem;
     }
 
+    .hero-search {
+        width: 100%;
+    }
+
     .hero-title {
         text-shadow: 0 3px 18px rgba(2, 6, 23, 0.55);
+        width: 100%;
+        max-width: 34rem;
+        text-wrap: balance;
     }
 
     .hero-lede {
         text-shadow: 0 2px 14px rgba(2, 6, 23, 0.5);
+        width: 100%;
+        max-width: 34rem;
+        text-wrap: balance;
     }
 
     .hero-media {
@@ -40,6 +54,10 @@
         width: 100%;
         object-fit: cover;
         object-position: center center;
+    }
+
+    .specialty-nav-btn {
+        display: none;
     }
 
     @media (min-width: 768px) {
@@ -52,8 +70,90 @@
             padding-bottom: 3rem;
         }
 
+        .hero-search {
+            max-width: 24rem;
+        }
+
         .hero-media {
             object-position: center top;
+        }
+    }
+
+    @media (min-width: 1440px) {
+        .specialty-nav-btn {
+            display: flex;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 1599px) {
+        .hero-title,
+        .hero-lede {
+            max-width: 22rem;
+        }
+    }
+
+    @media (min-width: 1200px) and (max-width: 1366px) and (max-height: 768px) {
+        .hero-scene {
+            min-height: 82vh;
+        }
+
+        .hero-shell {
+            padding-top: 1.15rem;
+            padding-bottom: 1.35rem;
+        }
+
+        .hero-copy {
+            max-width: 28rem;
+        }
+
+        .hero-title {
+            font-size: 1.95rem;
+            line-height: 1.04;
+        }
+
+        .hero-lede {
+            font-size: 0.9rem;
+            margin-bottom: 0.95rem;
+            max-width: 28rem;
+        }
+
+        .hero-search {
+            padding: 1rem;
+        }
+
+        .hero-search-stack {
+            gap: 0.7rem;
+        }
+
+        .hero-media {
+            object-position: center 18%;
+        }
+    }
+
+    @media (min-width: 1600px) and (max-height: 980px) {
+        .hero-scene {
+            min-height: 92vh;
+        }
+
+        .hero-shell {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .hero-copy {
+            max-width: 44rem;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            line-height: 1.05;
+            max-width: 22rem;
+        }
+
+        .hero-lede {
+            font-size: 0.96rem;
+            margin-bottom: 1rem;
+            max-width: 22rem;
         }
     }
 </style>
@@ -82,11 +182,12 @@
     </div>
 
     {{-- CONTENIDO --}}
-    <div class="hero-shell relative max-w-8xl mx-auto md:ml-[3%] px-4 sm:px-6 w-full">
-        <div class="hero-copy w-full md:max-w-8xl mx-auto md:mx-0 text-center md:text-left">
+    <div class="hero-shell relative w-full px-4 sm:px-6">
+        <div class="hero-copy w-full mx-auto md:mx-0 text-center md:text-left">
 
             <h1 class="hero-title text-3xl md:text-[2.4rem] font-bold leading-tight mb-4">
-                Encontrá tu espacio de <span class="text-gold">bienestar holístico</span>
+                <span class="whitespace-nowrap">Encontrá tu espacio de</span><br class="hidden md:block">
+                <span class="text-gold">bienestar holístico</span>
             </h1>
 
             <p class="hero-lede text-silver/80 text-base md:text-lg mb-10">
@@ -106,7 +207,7 @@
                 class="hero-search bg-blueInk/80 border border-blueNight rounded-2xl p-5 shadow-soft backdrop-blur-md
                         mx-auto md:mx-0">
 
-                <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-4 hero-search-stack">
                     <input type="hidden" name="search_mode" id="search_mode" value="{{ $searchMode }}">
 
                     <div class="grid grid-cols-2 gap-2 rounded-xl border border-blueMid/70 bg-blueNight/70 p-1">
@@ -238,7 +339,7 @@
 
         <div>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ route('dashboard.profile.edit') }}"
+                <a href="{{ route('register', ['account_type' => 'provider']) }}"
                    class="px-5 py-2.5 rounded-full border border-gold text-gold text-xl font-semibold hover:bg-gold/10 transition mx-auto">
                     Registrarme
                 </a>
@@ -260,7 +361,7 @@
         {{-- Flecha izquierda --}}
             <button id="specialty-prev"
                     type="button"
-                    class="hidden md:flex absolute left-[-7.5rem] top-1/2 -translate-y-1/2
+                    class="specialty-nav-btn absolute left-[-7.5rem] top-1/2 -translate-y-1/2
                         h-20 w-20 rounded-full bg-blueNight/95
                         text-gold shadow-soft
                         items-center justify-center transition group">
@@ -273,7 +374,7 @@
         {{-- Flecha derecha --}}
             <button id="specialty-next"
                     type="button"
-                    class="hidden md:flex absolute right-[-7rem] top-1/2 -translate-y-1/2
+                    class="specialty-nav-btn absolute right-[-7rem] top-1/2 -translate-y-1/2
                         h-20 w-20 rounded-full bg-blueNight/95
                         text-gold shadow-soft
                         items-center justify-center transition group">
